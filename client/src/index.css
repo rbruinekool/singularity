@@ -1,0 +1,18 @@
+body {
+  color: #bbb;
+  background: #111;
+  font-family: 'Inter', sans-serif;
+  user-select: none;
+  margin: 0
+}
+
+#app {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  column-gap: 2rem;
+  align-items: start;
+  row-gap: 0rem;
+}

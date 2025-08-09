@@ -1,0 +1,17 @@
+{
+  "name": "singularity-server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.ts",
+  "author": "rbruinekool",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "tinybase": "^6.0.0",
+    "ws": "^8.18.1"
+  },
+  "devDependencies": {
+    "@flydotio/dockerfile": "^0.7.9",
+    "@types/ws": "^8.18.0"
+  }
+}

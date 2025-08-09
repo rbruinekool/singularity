@@ -1,0 +1,21 @@
+{
+    "configurations": [
+        {
+            "name": "Debug Server",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceFolder}/index.ts",
+            "runtimeExecutable": "/bin/zsh",
+            "runtimeArgs": [
+                "-c",
+                "source ~/.zshrc && node --experimental-strip-types '${workspaceFolder}/index.ts'"
+            ],
+            "cwd": "${workspaceFolder}",
+            "internalConsoleOptions": "openOnSessionStart",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "console": "integratedTerminal"
+        }
+    ]
+}

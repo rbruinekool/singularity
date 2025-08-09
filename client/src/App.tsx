@@ -1,0 +1,105 @@
+import { StrictMode } from 'react';
+import ReconnectingWebSocket from 'reconnecting-websocket';
+import { createMergeableStore, MergeableStore } from 'tinybase';
+import { createSessionPersister } from 'tinybase/persisters/persister-browser';
+import { createWsSynchronizer } from 'tinybase/synchronizers/synchronizer-ws-client';
+import {
+  Provider,
+  useCreateMergeableStore,
+  useCreatePersister,
+  useCreateSynchronizer,
+} from 'tinybase/ui-react';
+import { Inspector } from 'tinybase/ui-react-inspector';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import { themeOptions } from './theme';
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
+import Main from './pages/main';
+import AppBar from '@mui/material/AppBar';
+import Toolbar from '@mui/material/Toolbar';
+import { RouterProvider, Outlet, Link, Navigate, createRouter, createRootRoute, createRoute } from '@tanstack/react-router';
+import NavTabs from './components/navtabs';
+import Connections from './pages/connections';
+
+const SERVER_SCHEME = 'ws://';
+const SERVER = 'localhost:8043'; //TODO: fix to make this work for remote clients
+
+const queryClient = new QueryClient();
+const theme = createTheme(themeOptions);
+
+// TanStack Router setup (move outside App to avoid duplicate registration)
+const RootRoute = createRootRoute({
+  component: () => {
+    // These hooks must be called inside the component
+    const serverPathId = location.pathname;
+    const store = useCreateMergeableStore(() => createMergeableStore());
+
+    useCreatePersister(
+      store,
+      (store) =>
+        createSessionPersister(store, 'local://' + SERVER + serverPathId),
+      [],
+      async (persister) => {
+        await persister.startAutoLoad();
+        await persister.startAutoSave();
+      }
+    );
+
+    //Temporary method te delete tables
+    //store.delTable('rundown-1');
+    useCreateSynchronizer(store, async (store: MergeableStore) => {
+      const synchronizer = await createWsSynchronizer(
+        store,
+        new ReconnectingWebSocket(SERVER_SCHEME + SERVER + serverPathId),
+        1
+      );
+      await synchronizer.startSync();
+
+      // If the websocket reconnects in the future, do another explicit sync.
+      synchronizer.getWebSocket().addEventListener('open', () => {
+        synchronizer.load().then(() => synchronizer.save());
+      });
+
+      return synchronizer;
+    });
+
+    return (
+      <ThemeProvider theme={theme}>
+        <QueryClientProvider client={queryClient}>
+          <AppBar position="static" color="primary" elevation={0} sx={{ borderBottom: '1px solid #eee' }}>
+            <Toolbar disableGutters sx={{ px: 2, minWidth: 0 }}>
+              <NavTabs />
+            </Toolbar>
+          </AppBar>
+          <StrictMode>
+            <Provider store={store}>
+              <Outlet />
+              <Inspector />
+            </Provider>
+          </StrictMode>
+        </QueryClientProvider>
+      </ThemeProvider>
+    );
+  },
+});
+const IndexRoute = createRoute({
+  getParentRoute: () => RootRoute,
+  path: '/',
+  component: () => <Navigate to="/main" />, 
+});
+const MainRoute = createRoute({
+  getParentRoute: () => RootRoute,
+  path: 'main',
+  component: Main,
+});
+const ConnectionsRoute = createRoute({
+  getParentRoute: () => RootRoute,
+  path: 'connections',
+  component: Connections,
+});
+const routeTree = RootRoute.addChildren([IndexRoute, MainRoute, ConnectionsRoute]);
+const router = createRouter({ routeTree });
+
+export const App = () => {
+  return <RouterProvider router={router} />;
+};
