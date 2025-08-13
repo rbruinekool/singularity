@@ -4,6 +4,7 @@ import { TableRow, TableCell, IconButton, Box, Menu, MenuItem } from '@mui/mater
 import { useTheme } from '@mui/material/styles';
 import MenuIcon from '@mui/icons-material/Menu';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
+import UpgradeIcon from '@mui/icons-material/Upgrade';
 
 interface RundownRowProps {
     rowId: string;
@@ -69,7 +70,15 @@ const RundownRow: React.FC<RundownRowProps> = ({
         'status',
         () => 'In',
         [rowId]
-    )
+    );
+
+    const handleUpdateClick = useSetCellCallback(
+        'rundown-1',
+        rowId,
+        'update',
+        () => Date.now(),
+        [rowId]
+    );
 
     const handleDeleteClick = useDelRowCallback(
         tableId,
@@ -115,16 +124,20 @@ const RundownRow: React.FC<RundownRowProps> = ({
                 }}
                 onDrop={() => onDrop?.(rowId)}
                 sx={{
-                    backgroundColor: isSelected
-                        ? theme.palette.action.selected
-                        : isDragOver
-                            ? theme.palette.action.hover
-                            : undefined,
+                    backgroundColor: rowStatus === 'In'
+                        ? theme.custom.live
+                        : isSelected
+                            ? theme.palette.action.selected
+                            : isDragOver
+                                ? theme.palette.action.hover
+                                : undefined,
                     cursor: 'pointer',
                     '&:hover': {
-                        backgroundColor: isSelected
-                            ? theme.palette.action.selected
-                            : theme.palette.action.hover,
+                        backgroundColor: rowStatus === 'In'
+                            ? theme.custom.liveHover
+                            : isSelected
+                                ? theme.palette.action.selected
+                                : theme.palette.action.hover,
                     }
                 }}
             >
@@ -168,6 +181,9 @@ const RundownRow: React.FC<RundownRowProps> = ({
                         </IconButton>
                         <IconButton size="small" sx={{ color: theme.palette.primary.main }} aria-label="Stop" onClick={handleStopClick}>
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h12v12H6z" /></svg>
+                        </IconButton>
+                        <IconButton size="small" sx={{ color: '#FFD700' }} aria-label="Update" onClick={handleUpdateClick}>
+                            <UpgradeIcon fontSize="small" />
                         </IconButton>
                     </Box>
                 </TableCell>

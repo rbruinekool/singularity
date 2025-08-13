@@ -3,11 +3,12 @@ import { createMergeableStore } from 'tinybase/mergeable-store';
 import { createWsServer } from 'tinybase/synchronizers/synchronizer-ws-server';
 import { WebSocketServer } from 'ws';
 import { createFilePersister } from 'tinybase/persisters/persister-file';
-import { createSingularPayload } from './singular/create-singular-payload.ts';
-import type { SingularModel } from './singular/interfaces.ts';
+import { PatchSingular } from './singular/patch-singular.ts';
+import { createLogger } from './utils/logger.ts';
 
 
 const store = createMergeableStore();
+const logger = createLogger('server');
 
 // Add connection tracking for memory monitoring
 const connectionTracker = new Map();
@@ -27,101 +28,44 @@ const wsServer = createWsServer(
   ))
 );
 
-
-
-//TODO Add intiial fetch of data on server start
-
-//Detect Changes of animation status of singular compositions and then PATCH all changes to singular
+//Animation change listener for Singular compositions
 store.addCellListener(
   'rundown-1', //TODO add support for more rundowns
   null,
   'status',
-  (store, tableId, rowId, cellId, newValue, oldValue, getCellChange) => {
+  async (store, tableId, rowId, cellId, newValue, oldValue, getCellChange) => {
     const animationStates = ['In', 'Out1', 'Out2'];
     if (typeof newValue !== 'string') return;
-
     if (!animationStates.includes(newValue)) return;
-    const row = store.getRow(tableId, rowId);
 
-    if (!row) {
-      console.error(`Row ${rowId} in table ${tableId} not found.`);
-      return;
-    }
+    logger.info({
+      tableId,
+      rowId,
+      oldValue,
+      newValue
+    }, 'Animation status changed');
 
-    console.log(`Animation status changed for component ${row.name} in table ${tableId}: ${oldValue} -> ${newValue}`);
+    // Use the consolidated PatchSingular function with animation state
+    await PatchSingular(store, tableId, rowId, newValue as 'In' | 'Out1' | 'Out2');
+  }
+)
 
-    if (!store.hasCell(tableId, rowId, 'subcompId') || !store.hasCell(tableId, rowId, 'appToken')) {
-      console.error(`${row.name} in table ${tableId} does not have subcompId or appToken cells.`);
-      return;
-    }
-    const subCompId = row.subcompId;
-    const appToken = row.appToken;
+// Asset update listener for Singular compositions
+store.addCellListener(
+  'rundown-1', //TODO add support for more rundowns
+  null,
+  'update',
+  async (store, tableId, rowId, cellId, newValue, oldValue, getCellChange) => {
+    logger.info({
+      tableId,
+      rowId,
+      cellId,
+      newValue,
+      oldValue
+    }, 'Component data updated');
 
-    let payload = {}
-    // If we animate to In, send the payload to ensure the composition is updated with new fields
-    if (newValue === 'In') {
-      const connections = store.getTable('connections')
-      if (!connections) {
-        console.error(`Table 'connections' not found when handling an animation change.`);
-        return;
-      };
-
-      const connectionEntry = Object.values(connections).find(
-        (entry: any) => entry.appToken === appToken
-      );
-
-      let model: SingularModel;
-      if (connectionEntry && connectionEntry.model && typeof connectionEntry.model === 'string') {
-        try {
-          model = JSON.parse(connectionEntry.model);
-          payload = createSingularPayload(row, model) || {};
-        } catch (e) {
-          console.error('Failed to parse model JSON:', e);
-        }
-      }
-    }
-
-
-    // Send PATCH request to Singular Live Control API
-    if (appToken && subCompId) {
-      // Add timeout and abort controller to prevent hanging requests
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-
-
-
-      fetch(`https://app.singular.live/apiv2/controlapps/${appToken}/control`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify([
-          {
-            "subCompositionId": subCompId,
-            "state": newValue,
-            "payload": payload
-          }
-        ]),
-        signal: controller.signal
-      })
-        .then(response => {
-          clearTimeout(timeoutId);
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-          return response.json();
-        })
-        .then(data => {
-          //console.log('Successfully sent control command to Singular Live:', data);
-        })
-        .catch(error => {
-          clearTimeout(timeoutId);
-          if (error.name !== 'AbortError') {
-            console.error('Error sending control command to Singular Live:', error);
-          }
-        });
-    }
-
+    // Use the consolidated PatchSingular function without animation state (payload update only)
+    await PatchSingular(store, tableId, rowId);
   }
 )
 

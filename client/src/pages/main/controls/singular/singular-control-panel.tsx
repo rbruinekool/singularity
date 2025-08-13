@@ -5,6 +5,7 @@ import { useCell, useRow, useSetCellCallback, useStore, useTable } from 'tinybas
 import { getPayloadModel } from '../../../../shared/singular/getPayloadModel';
 import { SingularModel, Model } from '../../../../shared/singular/interfaces/singular-model';
 import TextControl from './singular-controls/text-control';
+import TimeControl from './singular-controls/time-control';
 
 interface SingularControlPanelProps {
     rowId: string;
@@ -114,6 +115,15 @@ const SingularControlPanel: React.FC<SingularControlPanelProps> = ({ rundownId, 
                     return (
                         <Grid key={model.id} size={{ md: 12, lg: 6 }}>
                             <TextControl
+                                model={model}
+                                rundownId={rundownId}
+                                rowId={rowId} />
+                        </Grid>
+                    );
+                case 'datetime':
+                    return (
+                        <Grid key={model.id} size={{ md: 12, lg: 6 }}>
+                            <TimeControl
                                 model={model}
                                 rundownId={rundownId}
                                 rowId={rowId} />

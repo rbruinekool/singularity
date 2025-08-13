@@ -7,10 +7,13 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "start": "node --experimental-strip-types --max-old-space-size=2048 index.ts",
-    "dev": "node --experimental-strip-types --max-old-space-size=2048 index.ts"
+    "start": "LOG_LEVEL=warn node --experimental-strip-types --max-old-space-size=2048 index.ts",
+    "dev": "LOG_LEVEL=debug node --experimental-strip-types --max-old-space-size=2048 index.ts",
+    "start:silent": "LOG_LEVEL=silent node --experimental-strip-types --max-old-space-size=2048 index.ts"
   },
   "dependencies": {
+    "pino": "^9.9.0",
+    "pino-pretty": "^13.1.1",
     "tinybase": "^6.0.0",
     "ws": "^8.18.1"
   },

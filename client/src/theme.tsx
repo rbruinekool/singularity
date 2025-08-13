@@ -5,11 +5,15 @@ declare module '@mui/material/styles' {
   interface Theme {
     custom: {
       autocompleteBackground: string;
+      live: string;
+      liveHover: string;
     };
   }
   interface ThemeOptions {
     custom?: {
       autocompleteBackground?: string;
+      live?: string;
+      liveHover?: string;
     };
   }
 }
@@ -69,5 +73,7 @@ export const themeOptions: ThemeOptions = {
   spacing: 8,
   custom: {
     autocompleteBackground: '#333333', // Custom property for autocomplete background
+    live: '#732222', // Custom property for live row background
+    liveHover: '#8B3333', // Custom property for live row hover background (lighter)
   },
 };

@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { DialogActions, Button, TextField, Typography, Box } from '@mui/material';
 import { useAddRowCallback } from 'tinybase/ui-react';
-import { useQuery } from '@tanstack/react-query';
 import { fetchModel } from '../../../shared/fetchModel';
 
-const AddSingularDialog: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+const AddDialogSingular: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [label, setLabel] = useState('');
   const [token, setToken] = useState('');
   const [tokenError, setTokenError] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingError, setLoadingError] = useState<boolean>(false);
   const [loadStatus, setLoadStatus] = useState<string>('');
 
   const addRow = useAddRowCallback(
@@ -36,6 +36,7 @@ const AddSingularDialog: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     fetchModel(token)
       .then(model => {
         setIsLoading(false);
+        setLoadingError(false);
 
         const labelToUse = label === '' ? model?.name || '' : label
         addRow({
@@ -47,6 +48,7 @@ const AddSingularDialog: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       })
       .catch(error => {
         setIsLoading(false);
+        setLoadingError(true);
         setLoadStatus('Error Loading Composition');
         console.error('Failed to fetch model:', error);
         return null;
@@ -84,18 +86,16 @@ const AddSingularDialog: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         />
       </Box>
       <Box>
-        {isLoading ? (
+        {isLoading || loadingError ? (
           <Typography variant="body2" color="textSecondary">
             {loadStatus}
           </Typography>
         ) : (
-          <Typography variant="body2" color="textSecondary">
-            {loadStatus || "Enter the token to load the model."}
-          </Typography>
+          <Box sx={{ minHeight: 24 }} />
         )}
       </Box>
       <DialogActions>
-        <Button onClick={onClose} color="primary">Cancel</Button>
+        <Button variant="outlined" onClick={onClose} color="primary">Cancel</Button>
         {isLoading ? (
           <Button color="primary" variant="contained" disabled>
             <span style={{ display: 'flex', alignItems: 'center' }}>
@@ -133,4 +133,4 @@ const AddSingularDialog: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   );
 };
 
-export default AddSingularDialog;
+export default AddDialogSingular;

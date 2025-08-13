@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { Paper, Typography, Button, Box, Dialog, DialogTitle, DialogContent, DialogActions, Divider } from '@mui/material';
-import AddSingularDialog from './singular/add-singular-dialog';
+import AddDialogSingular from './singular/add-dialog-singular';
 
 const BUTTONS = [
     {
         label: 'Add',
         dialogTitle: 'Singular Control App',
-        dialogContent: AddSingularDialog,
+        dialogContent: AddDialogSingular,
     },
     {
         label: 'Add',
