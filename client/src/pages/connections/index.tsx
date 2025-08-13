@@ -1,8 +1,8 @@
 import React from 'react';
 import { Box, Grid, Paper, Table, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material';
 import { TableView } from 'tinybase/ui-react';
-import AddConnection from './components/add-connection';
-import ConnectionRow from './components/connection-row';
+import AddConnection from './add-connection';
+import ConnectionRow from './connection-row';
 
 const Connections: React.FC = () => {
     return (

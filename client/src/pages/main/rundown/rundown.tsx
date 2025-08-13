@@ -1,9 +1,10 @@
-import React, { useState, useRef, useMemo } from 'react';
-import { IconButton, TextField, Autocomplete, Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
+import React, { useState, useRef, useMemo, useCallback } from 'react';
+import { IconButton, TextField, Autocomplete, Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Menu, MenuItem, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button, Typography } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
 import { useTheme } from '@mui/material/styles';
-import { useAddRowCallback, useStore, SortedTableView, useTable } from 'tinybase/ui-react';
-import { Subcomposition, SingularModel } from '../../shared/interfaces/singular-model';
+import { useAddRowCallback, useStore, SortedTableView, useTable, useSetPartialRowCallback } from 'tinybase/ui-react';
+import { Subcomposition, SingularModel } from '../../../shared/singular/interfaces/singular-model';
 import RundownRow from './rundown-row';
 
 interface RundownSubcomposition {
@@ -11,10 +12,17 @@ interface RundownSubcomposition {
     name: string;
     state: string;
     appToken: string;
+    appLabel: string;
     logicLayer: { name: string; tag: string };
 }
 
-const Rundown: React.FC = () => {
+interface RundownProps {
+    selectedRowId?: string | null;
+    onRowSelect?: (rowId: string) => void;
+    onRowDelete?: (rowId: string) => void;
+}
+
+const Rundown: React.FC<RundownProps> = ({ selectedRowId, onRowSelect, onRowDelete }) => {
     const theme = useTheme();
     const [openAutocomplete, setOpenAutocomplete] = useState(false);
     const [selectedSubcomposition, setSelectedSubcomposition] = useState<{
@@ -26,7 +34,22 @@ const Rundown: React.FC = () => {
     } | null>(null);
     const [columnWidths, setColumnWidths] = useState(() => {
         const saved = localStorage.getItem('columnWidths');
-        return saved ? JSON.parse(saved) : [30, 60, 40, 180, 180];
+        const defaultWidths = [30, 60, 60, 120, 120, 30];
+        
+        if (saved) {
+            try {
+                const parsedWidths = JSON.parse(saved);
+                // If saved widths don't match expected column count, use defaults
+                if (parsedWidths.length !== 6) {
+                    console.log('Column count mismatch, using default widths');
+                    return defaultWidths;
+                }
+                return parsedWidths;
+            } catch {
+                return defaultWidths;
+            }
+        }
+        return defaultWidths;
     });
 
     const resizingCol = useRef<number | null>(null);
@@ -36,17 +59,64 @@ const Rundown: React.FC = () => {
 
     const draggedRowIdRef = useRef<string | null>(null);
     const [dragOverRowId, setDragOverRowId] = useState<string | null>(null);
+    const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
     const store = useStore();
     if (!store) return <p>No store available</p>;
+
+    // Create a callback for batch reordering operations
+    const updateRowOrders = useCallback((reorderedRowIds: string[]) => {
+        if (!store) return;
+
+        // Use a transaction for batch updates to ensure atomicity
+        store.transaction(() => {
+            reorderedRowIds.forEach((rowId, idx) => {
+                store.setCell('rundown-1', rowId, 'order', idx);
+            });
+        });
+    }, [store]);
 
     const handleAddClick = () => {
         setOpenAutocomplete((prev) => !prev);
     };
 
-    const handleSubcompositionSelect = useAddRowCallback(
-        'rundown-1',
-        (subComp: RundownSubcomposition) => {
+    const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => {
+        setMenuAnchorEl(event.currentTarget);
+    };
+
+    const handleMenuClose = () => {
+        setMenuAnchorEl(null);
+    };
+
+    const handleDeleteRundownClick = () => {
+        setMenuAnchorEl(null);
+        setDeleteDialogOpen(true);
+    };
+
+    const handleDeleteDialogClose = () => {
+        setDeleteDialogOpen(false);
+    };
+
+    const handleDeleteRundownConfirm = useCallback(() => {
+        if (!store) return;
+
+        // Delete all rows in the rundown-1 table
+        store.transaction(() => {
+            const rowIds = store.getRowIds('rundown-1');
+            rowIds.forEach((rowId) => {
+                store.delRow('rundown-1', rowId);
+            });
+        });
+
+        setDeleteDialogOpen(false);
+    }, [store]);
+
+    // Create a callback for incrementing existing row orders
+    const incrementExistingRowOrders = useCallback(() => {
+        if (!store) return;
+
+        store.transaction(() => {
             const rowIds = store.getRowIds('rundown-1');
             rowIds.forEach((rowId) => {
                 const currentOrder = store.getCell('rundown-1', rowId, 'order');
@@ -54,23 +124,32 @@ const Rundown: React.FC = () => {
                     store.setCell('rundown-1', rowId, 'order', currentOrder + 1);
                 }
             });
+        });
+    }, [store]);
+
+    const handleSubcompositionSelect = useAddRowCallback(
+        'rundown-1',
+        (subComp: RundownSubcomposition) => {
+            // First increment existing row orders
+            incrementExistingRowOrders();
 
             //The row that is added to the rundown table
             return {
                 status: subComp.state || 'Out1',
                 layer: subComp.logicLayer.name || 'default',
-                name: '',
+                name: subComp.name,
                 template: subComp.name,
                 type: 'subcomposition',
                 subcompId: subComp.id,
                 appToken: subComp.appToken,
+                appLabel: subComp.appLabel,
                 order: 0,
             };
         },
-        [],
+        [incrementExistingRowOrders],
         undefined,
         () => { setOpenAutocomplete(false); setSelectedSubcomposition(null); },
-        [setOpenAutocomplete]
+        [setOpenAutocomplete, incrementExistingRowOrders]
     );
 
     const handleMouseDown = (colIdx: number, e: React.MouseEvent) => {
@@ -84,19 +163,26 @@ const Rundown: React.FC = () => {
     const handleMouseMove = (e: MouseEvent) => {
         if (resizingCol.current !== null && resizingCol.current < columnWidths.length - 1) {
             const deltaX = e.clientX - startX.current;
-            const newWidths = [...startWidths.current];
             const leftCol = resizingCol.current;
             const rightCol = leftCol + 1;
             const minWidth = 40;
-            let newLeftWidth = Math.max(minWidth, startWidths.current[leftCol] + deltaX);
-            let newRightWidth = Math.max(minWidth, startWidths.current[rightCol] - deltaX);
-            // Only update if both columns are above minWidth
-            if (newLeftWidth + newRightWidth === startWidths.current[leftCol] + startWidths.current[rightCol]) {
-                newWidths[leftCol] = newLeftWidth;
-                newWidths[rightCol] = newRightWidth;
-                setColumnWidths(newWidths);
-                localStorage.setItem('columnWidths', JSON.stringify(newWidths));
+            
+            // Calculate new widths without clamping first
+            let newLeftWidth = startWidths.current[leftCol] + deltaX;
+            let newRightWidth = startWidths.current[rightCol] - deltaX;
+            
+            // Check if either column would go below minimum width
+            if (newLeftWidth < minWidth || newRightWidth < minWidth) {
+                // Stop the drag operation completely to prevent cascading effects
+                return;
             }
+            
+            // Update the widths since both are above minimum
+            const newWidths = [...startWidths.current];
+            newWidths[leftCol] = newLeftWidth;
+            newWidths[rightCol] = newRightWidth;
+            setColumnWidths(newWidths);
+            localStorage.setItem('columnWidths', JSON.stringify(newWidths));
         }
     };
 
@@ -107,7 +193,7 @@ const Rundown: React.FC = () => {
     };
 
     // Drag-and-drop logic for reordering rows
-    const moveRow = (fromRowId: string, toRowId: string) => {
+    const moveRow = useCallback((fromRowId: string, toRowId: string) => {
         if (!store) return;
         if (fromRowId === toRowId) return;
 
@@ -132,38 +218,36 @@ const Rundown: React.FC = () => {
         if (fromIndex < origToIndex) toIndex++;
         rowIds.splice(toIndex, 0, fromRowId);
 
-        // Reassign order values
-        rowIds.forEach((rowId, idx) => {
-            store.setCell('rundown-1', rowId, 'order', idx);
-        });
-    };
+        // Use the callback for batch updates
+        updateRowOrders(rowIds);
+    }, [store, updateRowOrders]);
 
     //const subcompositions: Subcomposition[] = data[0]?.subcompositions ? data[0].subcompositions : [];
     const connections = useTable('connections');
-    
+
     // Create array of subcompositions from connections for autocomplete
     const connectionSubcompositions = useMemo(() => {
         if (!connections) return [];
-        
+
         const result: Array<{
             label: string;
             appToken: string;
             subcompositions: Array<{ id: string; name: string }>;
         }> = [];
-        
+
         Object.entries(connections).forEach(([rowId, row]) => {
             try {
                 const label = row.label as string;
                 const appToken = row.appToken as string;
                 const modelString = row.model as string;
-                
+
                 if (label && appToken && modelString) {
                     const model: SingularModel = JSON.parse(modelString);
                     const subcompositions = model.subcompositions.map(sub => ({
                         id: sub.id,
                         name: sub.name
                     }));
-                    
+
                     if (subcompositions.length > 0) {
                         result.push({
                             label,
@@ -176,7 +260,7 @@ const Rundown: React.FC = () => {
                 console.error(`Error parsing model for connection ${rowId}:`, error);
             }
         });
-        
+
         return result;
     }, [connections]);
 
@@ -189,7 +273,7 @@ const Rundown: React.FC = () => {
             appToken: string;
             fullSubcomposition: Subcomposition | null;
         }> = [];
-        
+
         connectionSubcompositions.forEach(connection => {
             connection.subcompositions.forEach(sub => {
                 options.push({
@@ -201,7 +285,7 @@ const Rundown: React.FC = () => {
                 });
             });
         });
-        
+
         return options;
     }, [connectionSubcompositions]);
 
@@ -211,7 +295,13 @@ const Rundown: React.FC = () => {
     return (
         <Box position="relative">
             <TableContainer component={Paper}>
-                <Table size="small">
+                <Table 
+                    size="small" 
+                    sx={{ 
+                        tableLayout: 'fixed',
+                        width: '100%'
+                    }}
+                >
                     <TableHead>
                         <TableRow sx={{ backgroundColor: theme.palette.background.paper }}>
                             <TableCell sx={{ padding: '4px', width: columnWidths[0], position: 'relative', textAlign: 'center' }}>
@@ -225,18 +315,32 @@ const Rundown: React.FC = () => {
                                     onMouseDown={(e) => handleMouseDown(1, e)} />
                             </TableCell>
                             <TableCell sx={{ padding: '4px', width: columnWidths[2], borderRight: '1px solid rgba(200, 200, 200, 0.1)', position: 'relative', fontWeight: theme.typography.fontWeightBold }}>
-                                Layer
+                                Name
                                 <Box sx={dragBoxSx}
                                     onMouseDown={(e) => handleMouseDown(2, e)} />
                             </TableCell>
                             <TableCell sx={{ padding: '4px', width: columnWidths[3], borderRight: '1px solid rgba(200, 200, 200, 0.1)', position: 'relative', fontWeight: theme.typography.fontWeightBold }}>
-                                Name
+                                App
                                 <Box sx={dragBoxSx}
                                     onMouseDown={(e) => handleMouseDown(3, e)} />
                             </TableCell>
-                            <TableCell sx={{ padding: '4px', width: columnWidths[4], position: 'relative', fontWeight: theme.typography.fontWeightBold }}>
+                            <TableCell sx={{ padding: '4px', width: columnWidths[4], borderRight: '1px solid rgba(200, 200, 200, 0.1)', position: 'relative', fontWeight: theme.typography.fontWeightBold }}>
                                 Template
-                                {/* No divider after last column */}
+                                <Box sx={dragBoxSx}
+                                    onMouseDown={(e) => handleMouseDown(4, e)} />
+                            </TableCell>
+                            <TableCell sx={{ padding: '4px', width: columnWidths[5], position: 'relative', fontWeight: theme.typography.fontWeightBold }}>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    Layer
+                                    <IconButton
+                                        size="small"
+                                        onClick={handleMenuClick}
+                                        sx={{ ml: 1 }}
+                                    >
+                                        <MoreVertIcon fontSize="small" />
+                                    </IconButton>
+                                </Box>
+                                {/* No resize handle for last column */}
                             </TableCell>
                         </TableRow>
                     </TableHead>
@@ -249,6 +353,9 @@ const Rundown: React.FC = () => {
                                     {...props}
                                     columnWidths={columnWidths}
                                     tableId="rundown-1"
+                                    selectedRowId={selectedRowId}
+                                    onRowSelect={onRowSelect}
+                                    onRowDelete={onRowDelete}
                                     onDragStart={(rowId) => { draggedRowIdRef.current = rowId; }}
                                     onDragOver={setDragOverRowId}
                                     onDrop={(targetRowId) => {
@@ -296,6 +403,7 @@ const Rundown: React.FC = () => {
                                     state: 'OFF', // Default state
                                     logicLayer: { name: 'default', tag: 'default' }, // Default logic layer
                                     appToken: value.appToken,
+                                    appLabel: value.connectionLabel,
                                 };
                                 setSelectedSubcomposition(value);
                                 handleSubcompositionSelect(subComp);
@@ -309,11 +417,11 @@ const Rundown: React.FC = () => {
                         isOptionEqualToValue={(option, value) => option.id === value?.id}
                         renderGroup={(params) => (
                             <li key={params.key}>
-                                <Box sx={{ 
-                                    fontWeight: 'bold', 
+                                <Box sx={{
+                                    fontWeight: 'bold',
                                     color: theme.palette.primary.main,
                                     padding: '8px 16px',
-                                    backgroundColor: theme.palette.background.default 
+                                    backgroundColor: theme.palette.background.default
                                 }}>
                                     {params.group}
                                 </Box>
@@ -323,6 +431,38 @@ const Rundown: React.FC = () => {
                     />
                 </Box>
             )}
+
+            {/* Menu for more options */}
+            <Menu
+                anchorEl={menuAnchorEl}
+                open={Boolean(menuAnchorEl)}
+                onClose={handleMenuClose}
+            >
+                <MenuItem onClick={handleDeleteRundownClick} sx={{ color: 'error.main' }}>
+                    Delete Rundown
+                </MenuItem>
+            </Menu>
+
+            {/* Delete confirmation dialog */}
+            <Dialog
+                open={deleteDialogOpen}
+                onClose={handleDeleteDialogClose}
+            >
+                <DialogTitle>Delete Rundown</DialogTitle>
+                <DialogContent>
+                    <DialogContentText sx={{ fontSize: '0.875rem' }}>
+                            Are you sure you want to irreversibly delete the entire rundown?
+                            <span>This action cannot be undone and will</span>
+                        <span style={{ color: 'error.main'}}> irreversibly remove all items</span> from the rundown!
+                    </DialogContentText>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleDeleteDialogClose}>Cancel</Button>
+                    <Button onClick={handleDeleteRundownConfirm} color="error" variant="contained">
+                        Delete
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Box>
     );
 };

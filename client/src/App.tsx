@@ -14,12 +14,12 @@ import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { themeOptions } from './theme';
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
-import Main from './pages/main';
 import AppBar from '@mui/material/AppBar';
 import Toolbar from '@mui/material/Toolbar';
 import { RouterProvider, Outlet, Link, Navigate, createRouter, createRootRoute, createRoute } from '@tanstack/react-router';
 import NavTabs from './components/navtabs';
 import Connections from './pages/connections';
+import Main from './pages/main';
 
 const SERVER_SCHEME = 'ws://';
 const SERVER = 'localhost:8043'; //TODO: fix to make this work for remote clients
@@ -45,8 +45,6 @@ const RootRoute = createRootRoute({
       }
     );
 
-    //Temporary method te delete tables
-    //store.delTable('rundown-1');
     useCreateSynchronizer(store, async (store: MergeableStore) => {
       const synchronizer = await createWsSynchronizer(
         store,
@@ -64,28 +62,28 @@ const RootRoute = createRootRoute({
     });
 
     return (
-      <ThemeProvider theme={theme}>
-        <QueryClientProvider client={queryClient}>
-          <AppBar position="static" color="primary" elevation={0} sx={{ borderBottom: '1px solid #eee' }}>
-            <Toolbar disableGutters sx={{ px: 2, minWidth: 0 }}>
-              <NavTabs />
-            </Toolbar>
-          </AppBar>
-          <StrictMode>
-            <Provider store={store}>
+      <Provider store={store}>
+        <ThemeProvider theme={theme}>
+          <QueryClientProvider client={queryClient}>
+            <AppBar position="static" color="primary" elevation={0} sx={{ borderBottom: '1px solid #eee' }}>
+              <Toolbar disableGutters sx={{ px: 2, minWidth: 0 }}>
+                <NavTabs />
+              </Toolbar>
+            </AppBar>
+            <StrictMode>
               <Outlet />
               <Inspector />
-            </Provider>
-          </StrictMode>
-        </QueryClientProvider>
-      </ThemeProvider>
+            </StrictMode>
+          </QueryClientProvider>
+        </ThemeProvider>
+      </Provider>
     );
   },
 });
 const IndexRoute = createRoute({
   getParentRoute: () => RootRoute,
   path: '/',
-  component: () => <Navigate to="/main" />, 
+  component: () => <Navigate to="/main" />,
 });
 const MainRoute = createRoute({
   getParentRoute: () => RootRoute,

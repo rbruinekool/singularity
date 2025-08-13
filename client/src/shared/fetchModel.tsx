@@ -1,4 +1,4 @@
-import { SingularModel } from "./interfaces/singular-model";
+import { SingularModel } from "./singular/interfaces/singular-model";
 
 export const fetchModel = async (appToken: string): Promise<SingularModel > => {
     const response = await fetch(`https://app.singular.live/apiv2/controlapps/${appToken}/model`);

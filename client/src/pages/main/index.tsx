@@ -1,12 +1,31 @@
 import React, { useState } from 'react';
 import { Box, Divider } from '@mui/material';
-import Rundown from '../sections/rundown/rundown';
+import { useCell } from 'tinybase/ui-react';
+import Rundown from './rundown/rundown';
+import SingularControlPanel from './controls/singular/singular-control-panel';
+
+interface SelectedRowData {
+    rowId: string;
+    data: Record<string, any>;
+}
 
 const Main: React.FC = () => {
     const [dividerPosition, setDividerPosition] = useState(() => {
         const saved = localStorage.getItem('dividerPosition');
         return saved ? Number(saved) : 50;
     }); // Divider position as a percentage
+
+    const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
+    
+    // Get row type using TinyBase hook
+    const rowType = useCell('rundown-1', selectedRowId || '', 'type') as string;
+
+    const handleRowDelete = (deletedRowId: string) => {
+        // Clear selection if the deleted row was selected
+        if (selectedRowId === deletedRowId) {
+            setSelectedRowId(null);
+        }
+    };
 
     const handleMouseDown = (e: React.MouseEvent) => {
         const startX = e.clientX;
@@ -36,7 +55,11 @@ const Main: React.FC = () => {
                 flexDirection="column"
                 overflow="hidden"
             >
-                <Rundown />
+                <Rundown
+                    selectedRowId={selectedRowId}
+                    onRowSelect={setSelectedRowId}
+                    onRowDelete={handleRowDelete}
+                />
             </Box>
             <Divider
                 orientation="vertical"
@@ -48,7 +71,21 @@ const Main: React.FC = () => {
                 }}
             />
             <Box flex={`0 0 ${100 - dividerPosition}%`} overflow="hidden">
-                {/* Placeholder for other content */}
+                {selectedRowId ? (
+                    <>
+                        {rowType === 'subcomposition' ? (
+                            <SingularControlPanel rundownId={'rundown-1'} rowId={selectedRowId} />
+                        ) : (
+                            <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                                <div>Unknown row type: {rowType}</div>
+                            </Box>
+                        )}
+                    </>
+                ) : (
+                    <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                        <div>Select A Row on the Rundown</div>
+                    </Box>
+                )}
             </Box>
         </Box>
     );

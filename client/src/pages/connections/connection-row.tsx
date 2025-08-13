@@ -11,7 +11,6 @@ interface ConnectionRowProps {
 }
 
 const ConnectionRow: React.FC<ConnectionRowProps> = ({ tableId, rowId }) => {
-    const store = useStore();
     const delRow = useDelRowCallback(
         tableId,
         (rowId: string) => rowId
@@ -21,6 +20,8 @@ const ConnectionRow: React.FC<ConnectionRowProps> = ({ tableId, rowId }) => {
     const [isRenewing, setIsRenewing] = useState(false);
 
     const updatedAt = useCell(tableId, rowId, 'updatedAt');
+    const connectionType = useCell(tableId, rowId, 'type') as string;
+    const appToken = useCell(tableId, rowId, 'appToken') as string;
 
     // Format the timestamp
     const formatTimestamp = (timestamp: number | null | undefined): string => {
@@ -29,23 +30,36 @@ const ConnectionRow: React.FC<ConnectionRowProps> = ({ tableId, rowId }) => {
         return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     };
 
+    //Delete rundown row
     const handleDeleteClick = () => {
         setDialogOpen(true);
     };
 
-    const handleRenewClick = () => {
-        if (!store) throw new Error('Store is not available');
-        const connectionType = store.getCell(tableId, rowId, 'type');
+    const setModel = useSetCellCallback(
+        tableId,
+        rowId,
+        'model',
+        (value: string) => value,
+        []
+    );
 
+    const setUpdateTime = useSetCellCallback(
+        tableId,
+        rowId,
+        'updatedAt',
+        () => Date.now(),
+        []
+    );
+
+    const handleRenewClick = () => {
         // Renew logic for Singular Control Apps
         if (connectionType === 'singular-control-app') {
-            const token = store.getCell(tableId, rowId, 'appToken');
-            if (token && typeof token === 'string') {
+            if (appToken && typeof appToken === 'string') {
                 setIsRenewing(true);
-                fetchModel(token)
+                fetchModel(appToken)
                     .then(model => {
-                        store.setCell(tableId, rowId, 'model', JSON.stringify(model));
-                        store.setCell(tableId, rowId, 'updatedAt', Date.now());
+                        setModel(JSON.stringify(model))
+                        setUpdateTime();
                     })
                     .catch(error => {
                         console.error('Failed to renew connection:', error);
@@ -57,6 +71,7 @@ const ConnectionRow: React.FC<ConnectionRowProps> = ({ tableId, rowId }) => {
         }
     };
 
+    //TODO: Make sure that all components that belong to a certain connection are deleted or archived somehow
     const handleConfirmDelete = () => {
         delRow(rowId);
         setDialogOpen(false);

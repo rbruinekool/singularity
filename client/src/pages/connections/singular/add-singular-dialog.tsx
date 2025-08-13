@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { DialogActions, Button, TextField, Typography, Box } from '@mui/material';
 import { useAddRowCallback } from 'tinybase/ui-react';
 import { useQuery } from '@tanstack/react-query';
-import { fetchModel } from '../../shared/fetchModel';
+import { fetchModel } from '../../../shared/fetchModel';
 
 const AddSingularDialog: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [label, setLabel] = useState('');

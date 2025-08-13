@@ -6,6 +6,10 @@
   "author": "rbruinekool",
   "license": "MIT",
   "type": "module",
+  "scripts": {
+    "start": "node --experimental-strip-types --max-old-space-size=2048 index.ts",
+    "dev": "node --experimental-strip-types --max-old-space-size=2048 index.ts"
+  },
   "dependencies": {
     "tinybase": "^6.0.0",
     "ws": "^8.18.1"

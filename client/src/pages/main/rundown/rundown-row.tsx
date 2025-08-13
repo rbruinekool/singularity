@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { CellView, useStore, useCell } from 'tinybase/ui-react';
-import { TableRow, TableCell, IconButton, Box, Menu, MenuItem, TextField } from '@mui/material';
+import { CellView, useCell, useSetCellCallback, useDelRowCallback, useStore } from 'tinybase/ui-react';
+import { TableRow, TableCell, IconButton, Box, Menu, MenuItem } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import MenuIcon from '@mui/icons-material/Menu';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
@@ -9,6 +9,9 @@ interface RundownRowProps {
     rowId: string;
     columnWidths: number[];
     tableId: string;
+    selectedRowId?: string | null;
+    onRowSelect?: (rowId: string) => void;
+    onRowDelete?: (rowId: string) => void;
     onDragStart?: (rowId: string) => void;
     onDragOver?: (rowId: string) => void;
     onDrop?: (rowId: string) => void;
@@ -19,20 +22,23 @@ const RundownRow: React.FC<RundownRowProps> = ({
     rowId,
     columnWidths,
     tableId,
+    selectedRowId,
+    onRowSelect,
+    onRowDelete,
     onDragStart,
     onDragOver,
     onDrop,
     isDragOver,
 }) => {
-    const store = useStore();
     const theme = useTheme();
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const menuOpen = Boolean(anchorEl);
-    const [isEditingName, setIsEditingName] = useState(false);
-    const [editNameValue, setEditNameValue] = useState('');
-    
-    // Get the current name value from the store
-    const currentName = useCell(tableId, rowId, 'name') as string || '';
+
+    // Check if this row is selected
+    const isSelected = selectedRowId === rowId;
+
+    const rowStatus = useCell(tableId, rowId, 'status') as string;
+
 
     const cellSx = {
         padding: '4px',
@@ -40,15 +46,42 @@ const RundownRow: React.FC<RundownRowProps> = ({
         ...theme.typography.body1,
     };
 
-    const handlePlayClick = () => {
-        if (!store) throw new Error('Store is not available');
-        store.setCell('rundown-1', rowId, 'status', 'In');
-    }
+    // const handlePlayClick = () => {
+    //     if (!store) throw new Error('Store is not available');
+    //     store.setCell('rundown-1', rowId, 'status', 'In');
+    // }
 
-    const handleStopClick = () => {
-        if (!store) throw new Error('Store is not available');
-        store.setCell('rundown-1', rowId, 'status', 'Out1');
-    }
+    // const handleStopClick = () => {
+    //     if (!store) throw new Error('Store is not available');
+    //     store.setCell('rundown-1', rowId, 'status', 'Out1');
+    // }
+
+    const handleStopClick = useSetCellCallback(
+        'rundown-1',
+        rowId,
+        'status',
+        () => 'Out1',
+        [rowId]
+    );
+    const handlePlayClick = useSetCellCallback(
+        'rundown-1',
+        rowId,
+        'status',
+        () => 'In',
+        [rowId]
+    )
+
+    const handleDeleteClick = useDelRowCallback(
+        tableId,
+        rowId,
+        undefined,
+        () => {
+            // Call the onRowDelete callback before deleting to clear selection if needed
+            onRowDelete?.(rowId);
+            handleMenuClose();
+        }
+    );
+
 
     const handleMoreClick = (event: React.MouseEvent<HTMLElement>) => {
         setAnchorEl(event.currentTarget);
@@ -58,33 +91,16 @@ const RundownRow: React.FC<RundownRowProps> = ({
         setAnchorEl(null);
     };
 
-    const handleDeleteClick = () => {
-        if (!store) throw new Error('Store is not available');
-        store.delRow(tableId, rowId);
-        handleMenuClose();
-    };
+    const handleRowClick = (event: React.MouseEvent) => {
+        // Don't trigger row selection if clicking on interactive elements
+        const target = event.target as HTMLElement;
+        const isInteractive = target.closest('button') ||
+            target.closest('input') ||
+            target.closest('[role="button"]') ||
+            target.tagName.toLowerCase() === 'svg';
 
-    const handleNameClick = () => {
-        setEditNameValue(currentName);
-        setIsEditingName(true);
-    };
-
-    const handleNameSubmit = () => {
-        if (!store) throw new Error('Store is not available');
-        store.setCell(tableId, rowId, 'name', editNameValue);
-        setIsEditingName(false);
-    };
-
-    const handleNameCancel = () => {
-        setIsEditingName(false);
-        setEditNameValue('');
-    };
-
-    const handleNameKeyDown = (event: React.KeyboardEvent) => {
-        if (event.key === 'Enter') {
-            handleNameSubmit();
-        } else if (event.key === 'Escape') {
-            handleNameCancel();
+        if (!isInteractive && onRowSelect) {
+            onRowSelect(rowId);
         }
     };
 
@@ -92,13 +108,24 @@ const RundownRow: React.FC<RundownRowProps> = ({
     return (
         <>
             <TableRow
+                onClick={handleRowClick}
                 onDragOver={e => {
                     e.preventDefault();
                     onDragOver?.(rowId);
                 }}
                 onDrop={() => onDrop?.(rowId)}
                 sx={{
-                    backgroundColor: isDragOver ? theme.palette.action.hover : undefined,
+                    backgroundColor: isSelected
+                        ? theme.palette.action.selected
+                        : isDragOver
+                            ? theme.palette.action.hover
+                            : undefined,
+                    cursor: 'pointer',
+                    '&:hover': {
+                        backgroundColor: isSelected
+                            ? theme.palette.action.selected
+                            : theme.palette.action.hover,
+                    }
                 }}
             >
                 <TableCell sx={{ ...cellSx, width: columnWidths[0], borderRight: undefined, textAlign: 'center' }}>
@@ -145,48 +172,17 @@ const RundownRow: React.FC<RundownRowProps> = ({
                     </Box>
                 </TableCell>
                 <TableCell sx={{ ...cellSx, width: columnWidths[2] }}>
-                    <CellView tableId={tableId} rowId={rowId} cellId="layer" />
+                    <CellView tableId={tableId} rowId={rowId} cellId="name" />
                 </TableCell>
                 <TableCell sx={{ ...cellSx, width: columnWidths[3] }}>
-                    {isEditingName ? (
-                        <TextField
-                            value={editNameValue}
-                            onChange={(e) => setEditNameValue(e.target.value)}
-                            onBlur={handleNameSubmit}
-                            onKeyDown={handleNameKeyDown}
-                            size="small"
-                            variant="standard"
-                            autoFocus
-                            sx={{
-                                '& .MuiInput-input': {
-                                    padding: '2px 0',
-                                    fontSize: theme.typography.body1.fontSize,
-                                    fontFamily: theme.typography.body1.fontFamily,
-                                }
-                            }}
-                        />
-                    ) : (
-                        <Box
-                            onClick={handleNameClick}
-                            sx={{
-                                cursor: 'pointer',
-                                padding: '2px 0',
-                                minHeight: '20px',
-                                color: currentName ? 'inherit' : theme.palette.text.secondary,
-                                fontStyle: currentName ? 'normal' : 'italic',
-                                '&:hover': {
-                                    backgroundColor: theme.palette.action.hover,
-                                    borderRadius: '2px',
-                                }
-                            }}
-                        >
-                            {currentName || 'Click to edit'}
-                        </Box>
-                    )}
+                    <CellView tableId={tableId} rowId={rowId} cellId="appLabel" />
                 </TableCell>
                 <TableCell sx={{ ...cellSx, width: columnWidths[4] }}>
+                    <CellView tableId={tableId} rowId={rowId} cellId="template" />
+                </TableCell>
+                <TableCell sx={{ ...cellSx, width: columnWidths[5] }}>
                     <Box display="flex" alignItems="center" justifyContent="space-between">
-                        <CellView tableId={tableId} rowId={rowId} cellId="template" />
+                        <CellView tableId={tableId} rowId={rowId} cellId="layer" />
                         <IconButton
                             size="small"
                             aria-label="More options"
