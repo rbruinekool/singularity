@@ -34,6 +34,7 @@ const RundownRow: React.FC<RundownRowProps> = ({
     const theme = useTheme();
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const menuOpen = Boolean(anchorEl);
+    const store = useStore();
 
     // Check if this row is selected
     const isSelected = selectedRowId === rowId;
@@ -90,6 +91,37 @@ const RundownRow: React.FC<RundownRowProps> = ({
             handleMenuClose();
         }
     );
+
+    const handleDuplicateClick = () => {
+        if (!store) return;
+
+        store.transaction(() => {
+            // Get the original row data
+            const originalRow = store.getRow(tableId, rowId);
+            if (!originalRow) return;
+
+            const originalOrder = originalRow.order as number;
+            const originalName = originalRow.name as string;
+
+            // Increment orders of all rows below the current one
+            const rowIds = store.getRowIds(tableId);
+            rowIds.forEach((id) => {
+                const currentOrder = store.getCell(tableId, id, 'order');
+                if (typeof currentOrder === 'number' && currentOrder > originalOrder) {
+                    store.setCell(tableId, id, 'order', currentOrder + 1);
+                }
+            });
+
+            // Create new row with duplicated data
+            store.addRow(tableId, {
+                ...originalRow,
+                name: `copy of ${originalName}`,
+                order: originalOrder + 1,
+            });
+        });
+
+        handleMenuClose();
+    };
 
 
     const handleMoreClick = (event: React.MouseEvent<HTMLElement>) => {
@@ -229,6 +261,9 @@ const RundownRow: React.FC<RundownRowProps> = ({
                     }
                 }}
             >
+                <MenuItem onClick={handleDuplicateClick}>
+                    Duplicate
+                </MenuItem>
                 <MenuItem onClick={handleDeleteClick} sx={{ color: theme.palette.error.main }}>
                     Delete
                 </MenuItem>

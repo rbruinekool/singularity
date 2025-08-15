@@ -310,7 +310,7 @@ const Rundown: React.FC<RundownProps> = ({ selectedRowId, onRowSelect, onRowDele
                                 </IconButton>
                             </TableCell>
                             <TableCell sx={{ padding: '4px', width: columnWidths[1], borderRight: '1px solid rgba(200, 200, 200, 0.1)', position: 'relative', fontWeight: theme.typography.fontWeightBold }}>
-                                Status
+                                Controls
                                 <Box sx={dragBoxSx}
                                     onMouseDown={(e) => handleMouseDown(1, e)} />
                             </TableCell>

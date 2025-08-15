@@ -6,6 +6,7 @@ import { getPayloadModel } from '../../../../shared/singular/getPayloadModel';
 import { SingularModel, Model } from '../../../../shared/singular/interfaces/singular-model';
 import TextControl from './singular-controls/text-control';
 import TimeControl from './singular-controls/time-control';
+import SelectionControl from './singular-controls/selection-control';
 
 interface SingularControlPanelProps {
     rowId: string;
@@ -124,6 +125,15 @@ const SingularControlPanel: React.FC<SingularControlPanelProps> = ({ rundownId, 
                     return (
                         <Grid key={model.id} size={{ md: 12, lg: 6 }}>
                             <TimeControl
+                                model={model}
+                                rundownId={rundownId}
+                                rowId={rowId} />
+                        </Grid>
+                    );
+                case 'selection':
+                    return (
+                        <Grid key={model.id} size={{ md: 12, lg: 6 }}>
+                            <SelectionControl
                                 model={model}
                                 rundownId={rundownId}
                                 rowId={rowId} />

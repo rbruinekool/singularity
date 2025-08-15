@@ -33,7 +33,7 @@ export const PatchSingular = async (
         logger.error({ 
             componentName, 
             tableId, 
-            rowId 
+            row 
         }, 'Component missing required subcompId or appToken cells');
         return;
     }

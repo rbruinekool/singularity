@@ -391,10 +391,9 @@ const TimeControl: React.FC<TimeControlProps> = ({ model, rundownId, rowId }) =>
                             sx={{ flex: 1 }}
                         />
                         <Button
-                            variant="outlined"
+                            variant="contained"
                             size="small"
                             onClick={handleStartOnPlaySubmit}
-                            sx={{ mt: 0.5 }}
                         >
                             Set
                         </Button>
@@ -437,10 +436,9 @@ const TimeControl: React.FC<TimeControlProps> = ({ model, rundownId, rowId }) =>
                             sx={{ flex: 1 }}
                         />
                         <Button
-                            variant="outlined"
+                            variant="contained"
                             size="small"
                             onClick={handleCountdownSubmit}
-                            sx={{ mt: 0.5 }}
                         >
                             Set
                         </Button>
@@ -475,10 +473,10 @@ const TimeControl: React.FC<TimeControlProps> = ({ model, rundownId, rowId }) =>
                             sx={{ flex: 1 }}
                         />
                         <Button
-                            variant="outlined"
+                            variant="contained"
                             size="small"
                             onClick={handleManualTimeSubmit}
-                            sx={{ mt: 0.5 }}
+                  
                         >
                             Set
                         </Button>
