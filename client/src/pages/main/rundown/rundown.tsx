@@ -30,6 +30,7 @@ const Rundown: React.FC<RundownProps> = ({ selectedRowId, onRowSelect, onRowDele
         name: string;
         connectionLabel: string;
         appToken: string;
+        logicLayer: { name: string; tag: string };
         fullSubcomposition: Subcomposition | null;
     } | null>(null);
     const [columnWidths, setColumnWidths] = useState(() => {
@@ -112,44 +113,65 @@ const Rundown: React.FC<RundownProps> = ({ selectedRowId, onRowSelect, onRowDele
         setDeleteDialogOpen(false);
     }, [store]);
 
-    // Create a callback for incrementing existing row orders
-    const incrementExistingRowOrders = useCallback(() => {
+    // Create a callback for incrementing row orders from a specific position
+    const incrementRowOrdersFromPosition = useCallback((fromOrder: number) => {
         if (!store) return;
 
         store.transaction(() => {
             const rowIds = store.getRowIds('rundown-1');
             rowIds.forEach((rowId) => {
                 const currentOrder = store.getCell('rundown-1', rowId, 'order');
-                if (typeof currentOrder === 'number') {
+                if (typeof currentOrder === 'number' && currentOrder > fromOrder) {
                     store.setCell('rundown-1', rowId, 'order', currentOrder + 1);
                 }
             });
         });
     }, [store]);
 
+    // Create a callback for incrementing existing row orders (legacy for top insertion)
+    const incrementExistingRowOrders = useCallback(() => {
+        incrementRowOrdersFromPosition(-1); // -1 means increment all rows (insert at top)
+    }, [incrementRowOrdersFromPosition]);
+
     const handleSubcompositionSelect = useAddRowCallback(
         'rundown-1',
         (subComp: RundownSubcomposition) => {
-            // First increment existing row orders
-            incrementExistingRowOrders();
+            // Determine where to insert the new row
+            let insertOrder = 0; // Default to top
+            
+            if (selectedRowId) {
+                // Get the order of the currently selected row
+                const selectedRowOrder = store?.getCell('rundown-1', selectedRowId, 'order');
+                if (typeof selectedRowOrder === 'number') {
+                    insertOrder = selectedRowOrder + 1;
+                    // Increment orders of all rows after the selected row
+                    incrementRowOrdersFromPosition(selectedRowOrder);
+                } else {
+                    // Fallback: if selected row has no order, insert at top
+                    incrementExistingRowOrders();
+                }
+            } else {
+                // No row selected, insert at top
+                incrementExistingRowOrders();
+            }
 
             //The row that is added to the rundown table
             return {
                 status: subComp.state || 'Out1',
-                layer: subComp.logicLayer.name || 'default',
+                layer: subComp.logicLayer.name || '',
                 name: subComp.name,
                 template: subComp.name,
                 type: 'subcomposition',
                 subcompId: subComp.id,
                 appToken: subComp.appToken,
                 appLabel: subComp.appLabel,
-                order: 0,
+                order: insertOrder,
             };
         },
-        [incrementExistingRowOrders],
+        [incrementExistingRowOrders, incrementRowOrdersFromPosition, selectedRowId, store],
         undefined,
         () => { setOpenAutocomplete(false); setSelectedSubcomposition(null); },
-        [setOpenAutocomplete, incrementExistingRowOrders]
+        [setOpenAutocomplete, incrementExistingRowOrders, incrementRowOrdersFromPosition, selectedRowId]
     );
 
     const handleMouseDown = (colIdx: number, e: React.MouseEvent) => {
@@ -232,7 +254,11 @@ const Rundown: React.FC<RundownProps> = ({ selectedRowId, onRowSelect, onRowDele
         const result: Array<{
             label: string;
             appToken: string;
-            subcompositions: Array<{ id: string; name: string }>;
+            subcompositions: Array<{ 
+                id: string; 
+                name: string; 
+                logicLayer: { name: string; tag: string };
+            }>;
         }> = [];
 
         Object.entries(connections).forEach(([rowId, row]) => {
@@ -245,7 +271,8 @@ const Rundown: React.FC<RundownProps> = ({ selectedRowId, onRowSelect, onRowDele
                     const model: SingularModel = JSON.parse(modelString);
                     const subcompositions = model.subcompositions.map(sub => ({
                         id: sub.id,
-                        name: sub.name
+                        name: sub.name,
+                        logicLayer: sub.logicLayer
                     }));
 
                     if (subcompositions.length > 0) {
@@ -271,6 +298,7 @@ const Rundown: React.FC<RundownProps> = ({ selectedRowId, onRowSelect, onRowDele
             name: string;
             connectionLabel: string;
             appToken: string;
+            logicLayer: { name: string; tag: string };
             fullSubcomposition: Subcomposition | null;
         }> = [];
 
@@ -281,6 +309,7 @@ const Rundown: React.FC<RundownProps> = ({ selectedRowId, onRowSelect, onRowDele
                     name: sub.name,
                     connectionLabel: connection.label,
                     appToken: connection.appToken,
+                    logicLayer: sub.logicLayer,
                     fullSubcomposition: null // TODO: Fetch full subcomposition data when needed for detailed operations
                 });
             });
@@ -401,7 +430,7 @@ const Rundown: React.FC<RundownProps> = ({ selectedRowId, onRowSelect, onRowDele
                                     id: value.id,
                                     name: value.name,
                                     state: 'OFF', // Default state
-                                    logicLayer: { name: 'default', tag: 'default' }, // Default logic layer
+                                    logicLayer: value.logicLayer,
                                     appToken: value.appToken,
                                     appLabel: value.connectionLabel,
                                 };

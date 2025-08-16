@@ -4,14 +4,14 @@ import { useTheme } from '@mui/material/styles';
 import { CellView, useCell, useRow, useSetCellCallback, useStore } from 'tinybase/ui-react';
 import { Model } from '../../../../../shared/singular/interfaces/singular-model';
 
-interface TextControlProps {
+interface TextareaControlProps {
     model: Model;
     value?: string;
     rundownId: string;
     rowId: string;
 }
 
-const TextControl: React.FC<TextControlProps> = ({ model, rundownId, rowId }) => {
+const TextareaControl: React.FC<TextareaControlProps> = ({ model, rundownId, rowId }) => {
     const theme = useTheme();
     const [isEditing, setIsEditing] = useState(false);
     const [editValue, setEditValue] = useState('');
@@ -44,7 +44,8 @@ const TextControl: React.FC<TextControlProps> = ({ model, rundownId, rowId }) =>
     };
 
     const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-        if (event.key === 'Enter') {
+        if (event.key === 'Enter' && event.ctrlKey) {
+            // Ctrl+Enter to submit
             handleNameSubmit();
             setIsEditing(false);
         } else if (event.key === 'Escape') {
@@ -69,6 +70,8 @@ const TextControl: React.FC<TextControlProps> = ({ model, rundownId, rowId }) =>
                         placeholder={model.defaultValue}
                         size="small"
                         fullWidth
+                        multiline
+                        rows={2}
                         variant="outlined"
                         autoFocus
                         sx={{
@@ -86,15 +89,17 @@ const TextControl: React.FC<TextControlProps> = ({ model, rundownId, rowId }) =>
                             padding: '8px 12px',
                             border: '1px solid',
                             borderColor: theme.palette.divider,
-                            borderRadius: '4px', // Match TextField border radius
-                            height: '17px', // Use minHeight instead of fixed height
+                            borderRadius: '4px',
+                            minHeight: '41px', // Height to accommodate ~2 lines of text
                             display: 'flex',
-                            alignItems: 'center',
+                            alignItems: 'flex-start',
                             color: storeValue ? 'inherit' : theme.palette.text.secondary,
                             fontStyle: storeValue ? 'normal' : 'italic',
                             fontSize: theme.typography.body2.fontSize,
                             fontFamily: theme.typography.body2.fontFamily,
                             lineHeight: theme.typography.body2.lineHeight,
+                            whiteSpace: 'pre-wrap', // Preserve line breaks
+                            wordBreak: 'break-word',
                             '&:hover': {
                                 borderColor: theme.palette.primary.main,
                                 backgroundColor: theme.palette.action.hover,
@@ -114,4 +119,4 @@ const TextControl: React.FC<TextControlProps> = ({ model, rundownId, rowId }) =>
     );
 };
 
-export default TextControl;
+export default TextareaControl;

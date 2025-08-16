@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Typography, TextField, FormControl, FormLabel, RadioGroup, FormControlLabel, Radio, Button, InputAdornment } from '@mui/material';
+import { Box, Typography, TextField, FormControl, FormLabel, RadioGroup, FormControlLabel, Radio, Button, InputAdornment, Grid } from '@mui/material';
 import { AccessTime } from '@mui/icons-material';
 import { useSetCellCallback, useCell } from 'tinybase/ui-react';
 import { Model } from '../../../../../shared/singular/interfaces/singular-model';
@@ -333,165 +333,167 @@ const TimeControl: React.FC<TimeControlProps> = ({ model, rundownId, rowId }) =>
     };
 
     return (
-        <Box sx={{ p: 2, border: '1px solid #e0e0e0', borderRadius: 1 }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
-                {model.title}
-            </Typography>
-            
-            {currentValue && (
-                <Box sx={{ mb: 2 }}>
-                    <Typography variant="body2" color="text.secondary">
-                        Target: {formatCurrentTime(currentValue)}
-                    </Typography>
-                    <Typography variant="body2" color="primary" sx={{ fontFamily: 'monospace' }}>
-                        {getTimeRemaining(currentValue)}
-                    </Typography>
-                </Box>
-            )}
-            
-            <FormControl component="fieldset" sx={{ mb: 2 }}>
-                <FormLabel component="legend">Input Mode</FormLabel>
-                <RadioGroup
-                    row
-                    value={controlMode}
-                    onChange={(e) => setControlMode(e.target.value as 'manual' | 'countdown' | 'startOnPlay')}
-                >
-                    <FormControlLabel value="startOnPlay" control={<Radio size="small" />} label="Start on Play" />
-                    <FormControlLabel value="countdown" control={<Radio size="small" />} label="Clock Countdown" />
-                    <FormControlLabel value="manual" control={<Radio size="small" />} label="Instant Countdown" />
-                </RadioGroup>
-            </FormControl>
-            
-            {controlMode === 'startOnPlay' ? (
-                <Box>
-                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', mb: 1 }}>
-                        <TextField
-                            label="Duration (HH:MM:SS or MM:SS)"
-                            value={startOnPlayInput}
-                            onChange={(e) => {
-                                setStartOnPlayInput(e.target.value);
-                                setInputError('');
-                            }}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                    handleStartOnPlaySubmit();
-                                }
-                            }}
-                            size="small"
-                            placeholder="30:00"
-                            error={!!inputError}
-                            helperText={inputError || 'Timer will start when asset plays'}
-                            InputProps={{
-                                startAdornment: (
-                                    <InputAdornment position="start">
-                                        <AccessTime />
-                                    </InputAdornment>
-                                ),
-                            }}
-                            sx={{ flex: 1 }}
-                        />
-                        <Button
-                            variant="contained"
-                            size="small"
-                            onClick={handleStartOnPlaySubmit}
-                        >
-                            Set
-                        </Button>
-                    </Box>
-                    <Box sx={{ mt: 1 }}>
-                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
-                            Quick select (minutes):
+        <Grid size={{ md: 12, lg: 6 }}>
+            <Box sx={{ p: 2, border: '1px solid #e0e0e0', borderRadius: 1 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
+                    {model.title}
+                </Typography>
+                
+                {currentValue && (
+                    <Box sx={{ mb: 2 }}>
+                        <Typography variant="body2" color="text.secondary">
+                            Target: {formatCurrentTime(currentValue)}
                         </Typography>
-                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                            {generateStartOnPlayQuickMinutes()}
+                        <Typography variant="body2" color="primary" sx={{ fontFamily: 'monospace' }}>
+                            {getTimeRemaining(currentValue)}
+                        </Typography>
+                    </Box>
+                )}
+                
+                <FormControl component="fieldset" sx={{ mb: 2 }}>
+                    <FormLabel component="legend">Input Mode</FormLabel>
+                    <RadioGroup
+                        row
+                        value={controlMode}
+                        onChange={(e) => setControlMode(e.target.value as 'manual' | 'countdown' | 'startOnPlay')}
+                    >
+                        <FormControlLabel value="startOnPlay" control={<Radio size="small" />} label="Start on Play" />
+                        <FormControlLabel value="countdown" control={<Radio size="small" />} label="Clock Countdown" />
+                        <FormControlLabel value="manual" control={<Radio size="small" />} label="Instant Countdown" />
+                    </RadioGroup>
+                </FormControl>
+                
+                {controlMode === 'startOnPlay' ? (
+                    <Box>
+                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', mb: 1 }}>
+                            <TextField
+                                label="Duration (HH:MM:SS or MM:SS)"
+                                value={startOnPlayInput}
+                                onChange={(e) => {
+                                    setStartOnPlayInput(e.target.value);
+                                    setInputError('');
+                                }}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        handleStartOnPlaySubmit();
+                                    }
+                                }}
+                                size="small"
+                                placeholder="30:00"
+                                error={!!inputError}
+                                helperText={inputError || 'Timer will start when asset plays'}
+                                InputProps={{
+                                    startAdornment: (
+                                        <InputAdornment position="start">
+                                            <AccessTime />
+                                        </InputAdornment>
+                                    ),
+                                }}
+                                sx={{ flex: 1 }}
+                            />
+                            <Button
+                                variant="contained"
+                                size="small"
+                                onClick={handleStartOnPlaySubmit}
+                            >
+                                Set
+                            </Button>
+                        </Box>
+                        <Box sx={{ mt: 1 }}>
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                                Quick select (minutes):
+                            </Typography>
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                {generateStartOnPlayQuickMinutes()}
+                            </Box>
                         </Box>
                     </Box>
-                </Box>
-            ) : controlMode === 'countdown' ? (
-                <Box>
-                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', mb: 1 }}>
-                        <TextField
-                            label="Countdown to time (HH:MM)"
-                            value={countdownTimeInput}
-                            onChange={(e) => {
-                                setCountdownTimeInput(e.target.value);
-                                setInputError('');
-                            }}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                    handleCountdownSubmit();
-                                }
-                            }}
-                            size="small"
-                            placeholder="14:30"
-                            error={!!inputError}
-                            helperText={inputError || 'Enter target time in HH:MM format'}
-                            InputProps={{
-                                startAdornment: (
-                                    <InputAdornment position="start">
-                                        <AccessTime />
-                                    </InputAdornment>
-                                ),
-                            }}
-                            sx={{ flex: 1 }}
-                        />
-                        <Button
-                            variant="contained"
-                            size="small"
-                            onClick={handleCountdownSubmit}
-                        >
-                            Set
-                        </Button>
-                    </Box>
-                </Box>
-            ) : (
-                <Box>
-                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', mb: 1 }}>
-                        <TextField
-                            label="Duration (HH:MM:SS or MM:SS)"
-                            value={manualTimeInput}
-                            onChange={(e) => {
-                                setManualTimeInput(e.target.value);
-                                setInputError('');
-                            }}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                    handleManualTimeSubmit();
-                                }
-                            }}
-                            size="small"
-                            placeholder="30:00"
-                            error={!!inputError}
-                            helperText={inputError || 'Enter duration to add (e.g., 30:00 for 30 minutes)'}
-                            InputProps={{
-                                startAdornment: (
-                                    <InputAdornment position="start">
-                                        <AccessTime />
-                                    </InputAdornment>
-                                ),
-                            }}
-                            sx={{ flex: 1 }}
-                        />
-                        <Button
-                            variant="contained"
-                            size="small"
-                            onClick={handleManualTimeSubmit}
-                  
-                        >
-                            Set
-                        </Button>
-                    </Box>
-                    <Box sx={{ mt: 1 }}>
-                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
-                            Quick select (minutes):
-                        </Typography>
-                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                            {generateQuickMinutes()}
+                ) : controlMode === 'countdown' ? (
+                    <Box>
+                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', mb: 1 }}>
+                            <TextField
+                                label="Countdown to time (HH:MM)"
+                                value={countdownTimeInput}
+                                onChange={(e) => {
+                                    setCountdownTimeInput(e.target.value);
+                                    setInputError('');
+                                }}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        handleCountdownSubmit();
+                                    }
+                                }}
+                                size="small"
+                                placeholder="14:30"
+                                error={!!inputError}
+                                helperText={inputError || 'Enter target time in HH:MM format'}
+                                InputProps={{
+                                    startAdornment: (
+                                        <InputAdornment position="start">
+                                            <AccessTime />
+                                        </InputAdornment>
+                                    ),
+                                }}
+                                sx={{ flex: 1 }}
+                            />
+                            <Button
+                                variant="contained"
+                                size="small"
+                                onClick={handleCountdownSubmit}
+                            >
+                                Set
+                            </Button>
                         </Box>
                     </Box>
-                </Box>
-            )}
-        </Box>
+                ) : (
+                    <Box>
+                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', mb: 1 }}>
+                            <TextField
+                                label="Duration (HH:MM:SS or MM:SS)"
+                                value={manualTimeInput}
+                                onChange={(e) => {
+                                    setManualTimeInput(e.target.value);
+                                    setInputError('');
+                                }}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        handleManualTimeSubmit();
+                                    }
+                                }}
+                                size="small"
+                                placeholder="30:00"
+                                error={!!inputError}
+                                helperText={inputError || 'Enter duration to add (e.g., 30:00 for 30 minutes)'}
+                                InputProps={{
+                                    startAdornment: (
+                                        <InputAdornment position="start">
+                                            <AccessTime />
+                                        </InputAdornment>
+                                    ),
+                                }}
+                                sx={{ flex: 1 }}
+                            />
+                            <Button
+                                variant="contained"
+                                size="small"
+                                onClick={handleManualTimeSubmit}
+                      
+                            >
+                                Set
+                            </Button>
+                        </Box>
+                        <Box sx={{ mt: 1 }}>
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                                Quick select (minutes):
+                            </Typography>
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                {generateQuickMinutes()}
+                            </Box>
+                        </Box>
+                    </Box>
+                )}
+            </Box>
+        </Grid>
     );
 };
 
