@@ -1,11 +1,12 @@
 import React, { useState, useRef, useMemo, useCallback } from 'react';
-import { IconButton, TextField, Autocomplete, Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Menu, MenuItem, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button, Typography } from '@mui/material';
+import { IconButton, TextField, Autocomplete, Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Menu, MenuItem, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import { useTheme } from '@mui/material/styles';
-import { useAddRowCallback, useStore, SortedTableView, useTable, useSetPartialRowCallback } from 'tinybase/ui-react';
+import { useAddRowCallback, useStore, useTable, useDelRowCallback, useRowIds } from 'tinybase/ui-react';
 import { Subcomposition, SingularModel } from '../../../shared/singular/interfaces/singular-model';
 import RundownRow from './rundown-row';
+import FilteredSortedTableView from './components/filtered-sorted-table-view';
 
 interface RundownSubcomposition {
     id: string;
@@ -17,12 +18,13 @@ interface RundownSubcomposition {
 }
 
 interface RundownProps {
+    rundownId?: string;
     selectedRowId?: string | null;
     onRowSelect?: (rowId: string) => void;
     onRowDelete?: (rowId: string) => void;
 }
 
-const Rundown: React.FC<RundownProps> = ({ selectedRowId, onRowSelect, onRowDelete }) => {
+const Rundown: React.FC<RundownProps> = ({ rundownId = 'rundown-1', selectedRowId, onRowSelect, onRowDelete }) => {
     const theme = useTheme();
     const [openAutocomplete, setOpenAutocomplete] = useState(false);
     const [selectedSubcomposition, setSelectedSubcomposition] = useState<{
@@ -66,6 +68,10 @@ const Rundown: React.FC<RundownProps> = ({ selectedRowId, onRowSelect, onRowDele
     const store = useStore();
     if (!store) return <p>No store available</p>;
 
+    // TinyBase hooks for efficient operations
+    const rundownTableRowIds = useRowIds('rundown-1');
+    const rundownTable = useTable('rundown-1');
+
     // Create a callback for batch reordering operations
     const updateRowOrders = useCallback((reorderedRowIds: string[]) => {
         if (!store) return;
@@ -99,34 +105,48 @@ const Rundown: React.FC<RundownProps> = ({ selectedRowId, onRowSelect, onRowDele
         setDeleteDialogOpen(false);
     };
 
-    const handleDeleteRundownConfirm = useCallback(() => {
-        if (!store) return;
+    // Use TinyBase hook to delete rundown from rundowns table
+    const deleteRundownCallback = useDelRowCallback(
+        'rundowns',
+        rundownId,
+        undefined,
+        () => {
+            // After successful deletion, close the dialog
+            setDeleteDialogOpen(false);
+        }
+    );
 
-        // Delete all rows in the rundown-1 table
+    const handleDeleteRundownConfirm = useCallback(() => {
+        if (!store || !rundownTableRowIds) return;
+
+        // Delete all rows for the active rundown from rundown-1 table
         store.transaction(() => {
-            const rowIds = store.getRowIds('rundown-1');
-            rowIds.forEach((rowId) => {
-                store.delRow('rundown-1', rowId);
+            rundownTableRowIds.forEach(rowId => {
+                const rowRundownId = rundownTable?.[rowId]?.rundownId;
+                if (rowRundownId === rundownId) {
+                    store.delRow('rundown-1', rowId);
+                }
             });
         });
 
-        setDeleteDialogOpen(false);
-    }, [store]);
+        // Delete the rundown itself from the rundowns table
+        deleteRundownCallback();
+    }, [store, rundownId, deleteRundownCallback, rundownTableRowIds, rundownTable]);
 
     // Create a callback for incrementing row orders from a specific position
     const incrementRowOrdersFromPosition = useCallback((fromOrder: number) => {
-        if (!store) return;
+        if (!store || !rundownTableRowIds) return;
 
         store.transaction(() => {
-            const rowIds = store.getRowIds('rundown-1');
-            rowIds.forEach((rowId) => {
-                const currentOrder = store.getCell('rundown-1', rowId, 'order');
-                if (typeof currentOrder === 'number' && currentOrder > fromOrder) {
+            rundownTableRowIds.forEach((rowId) => {
+                const currentOrder = rundownTable?.[rowId]?.order;
+                const rowRundownId = rundownTable?.[rowId]?.rundownId;
+                if (typeof currentOrder === 'number' && currentOrder > fromOrder && rowRundownId === rundownId) {
                     store.setCell('rundown-1', rowId, 'order', currentOrder + 1);
                 }
             });
         });
-    }, [store]);
+    }, [store, rundownId, rundownTableRowIds, rundownTable]);
 
     // Create a callback for incrementing existing row orders (legacy for top insertion)
     const incrementExistingRowOrders = useCallback(() => {
@@ -134,14 +154,14 @@ const Rundown: React.FC<RundownProps> = ({ selectedRowId, onRowSelect, onRowDele
     }, [incrementRowOrdersFromPosition]);
 
     const handleSubcompositionSelect = useAddRowCallback(
-        'rundown-1',
+        'rundown-1', // Always use the single table
         (subComp: RundownSubcomposition) => {
             // Determine where to insert the new row
             let insertOrder = 0; // Default to top
             
             if (selectedRowId) {
                 // Get the order of the currently selected row
-                const selectedRowOrder = store?.getCell('rundown-1', selectedRowId, 'order');
+                const selectedRowOrder = rundownTable?.[selectedRowId]?.order;
                 if (typeof selectedRowOrder === 'number') {
                     insertOrder = selectedRowOrder + 1;
                     // Increment orders of all rows after the selected row
@@ -165,13 +185,14 @@ const Rundown: React.FC<RundownProps> = ({ selectedRowId, onRowSelect, onRowDele
                 subcompId: subComp.id,
                 appToken: subComp.appToken,
                 appLabel: subComp.appLabel,
+                rundownId: rundownId, // Add the rundownId column
                 order: insertOrder,
             };
         },
-        [incrementExistingRowOrders, incrementRowOrdersFromPosition, selectedRowId, store],
+        [incrementExistingRowOrders, incrementRowOrdersFromPosition, selectedRowId, rundownTable, rundownId],
         undefined,
         () => { setOpenAutocomplete(false); setSelectedSubcomposition(null); },
-        [setOpenAutocomplete, incrementExistingRowOrders, incrementRowOrdersFromPosition, selectedRowId]
+        [setOpenAutocomplete, incrementExistingRowOrders, incrementRowOrdersFromPosition, selectedRowId, rundownId]
     );
 
     const handleMouseDown = (colIdx: number, e: React.MouseEvent) => {
@@ -214,16 +235,19 @@ const Rundown: React.FC<RundownProps> = ({ selectedRowId, onRowSelect, onRowDele
         document.removeEventListener('mouseup', handleMouseUp);
     };
 
-    // Drag-and-drop logic for reordering rows
+    // Drag-and-drop logic for reordering rows (only within the same rundown)
     const moveRow = useCallback((fromRowId: string, toRowId: string) => {
-        if (!store) return;
+        if (!store || !rundownTableRowIds) return;
         if (fromRowId === toRowId) return;
 
-        // Get all rows sorted by order
-        const rowIds = store.getRowIds('rundown-1').slice();
+        // Get all rows for this rundown and sort by order
+        const rowIds = rundownTableRowIds.filter(rowId => 
+            rundownTable?.[rowId]?.rundownId === rundownId
+        );
+        
         rowIds.sort((a, b) => {
-            const orderA = store.getCell('rundown-1', a, 'order') ?? 0;
-            const orderB = store.getCell('rundown-1', b, 'order') ?? 0;
+            const orderA = rundownTable?.[a]?.order ?? 0;
+            const orderB = rundownTable?.[b]?.order ?? 0;
             if (typeof orderA !== 'number' || typeof orderB !== 'number') {
                 return 0; // If order is not a number, keep original order
             }
@@ -242,7 +266,7 @@ const Rundown: React.FC<RundownProps> = ({ selectedRowId, onRowSelect, onRowDele
 
         // Use the callback for batch updates
         updateRowOrders(rowIds);
-    }, [store, updateRowOrders]);
+    }, [store, updateRowOrders, rundownId, rundownTableRowIds, rundownTable]);
 
     //const subcompositions: Subcomposition[] = data[0]?.subcompositions ? data[0].subcompositions : [];
     const connections = useTable('connections');
@@ -374,9 +398,10 @@ const Rundown: React.FC<RundownProps> = ({ selectedRowId, onRowSelect, onRowDele
                         </TableRow>
                     </TableHead>
                     <TableBody sx={{ backgroundColor: theme.palette.background.default }}>
-                        <SortedTableView
+                        <FilteredSortedTableView
                             tableId={'rundown-1'}
                             cellId={'order'}
+                            filterRundownId={rundownId}
                             rowComponent={(props) => (
                                 <RundownRow
                                     {...props}
@@ -425,7 +450,6 @@ const Rundown: React.FC<RundownProps> = ({ selectedRowId, onRowSelect, onRowDele
                         )}
                         onChange={(event, value) => {
                             if (value) {
-                                // TODO: Get actual state, logicLayer from the full subcomposition data instead of defaults
                                 const subComp: RundownSubcomposition = {
                                     id: value.id,
                                     name: value.name,

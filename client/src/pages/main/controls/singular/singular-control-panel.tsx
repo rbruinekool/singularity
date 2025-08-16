@@ -1,6 +1,7 @@
-import React, { useState, useMemo } from 'react';
-import { Box, Typography, Paper, Divider, TextField, Grid } from '@mui/material';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Box, Typography, Paper, Divider, TextField, Grid, IconButton, Collapse } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { useCell, useRow, useSetCellCallback, useStore, useTable } from 'tinybase/ui-react';
 import { getPayloadModel } from '../../../../shared/singular/getPayloadModel';
 import { SingularModel, Model } from '../../../../shared/singular/interfaces/singular-model';
@@ -14,6 +15,9 @@ interface SingularControlPanelProps {
     rowId: string;
     rundownId: string;
 }
+
+// Helper function to generate storage key
+const getStorageKey = (rundownId: string, rowId: string) => `singularControlPanel_${rundownId}_${rowId}_collapsed`;
 
 /**
  * SingularControlPanel component displays and manages controls for a Singular subcomposition row.
@@ -35,9 +39,43 @@ interface SingularControlPanelProps {
  */
 const SingularControlPanel: React.FC<SingularControlPanelProps> = ({ rundownId, rowId }) => {
     const theme = useTheme();
-    const store = useStore();
     const [isEditingName, setIsEditingName] = useState(false);
     const [editNameValue, setEditNameValue] = useState('');
+    const [isRowChanging, setIsRowChanging] = useState(false);
+    
+    // Collapsible state - stored per row in localStorage
+    const [isCollapsed, setIsCollapsed] = useState(() => {
+        const stored = localStorage.getItem(getStorageKey(rundownId, rowId));
+        return stored ? JSON.parse(stored) : false; // Default to expanded
+    });
+    
+    // Update collapsed state when rowId or rundownId changes
+    useEffect(() => {
+        const stored = localStorage.getItem(getStorageKey(rundownId, rowId));
+        const newCollapsedState = stored ? JSON.parse(stored) : false;
+        
+        // Check if we're switching rows (not just initial load)
+        if (newCollapsedState !== isCollapsed) {
+            setIsRowChanging(true);
+            setIsCollapsed(newCollapsedState);
+            
+            // Reset the row changing flag after a short delay
+            const timer = setTimeout(() => {
+                setIsRowChanging(false);
+            }, 50);
+            
+            return () => clearTimeout(timer);
+        }
+    }, [rundownId, rowId]);
+    
+    // Update localStorage when collapse state changes
+    useEffect(() => {
+        localStorage.setItem(getStorageKey(rundownId, rowId), JSON.stringify(isCollapsed));
+    }, [isCollapsed, rundownId, rowId]);
+    
+    const handleToggleCollapse = () => {
+        setIsCollapsed(!isCollapsed);
+    };
 
     const rowData = useRow(rundownId, rowId) || {};
 
@@ -222,25 +260,39 @@ const SingularControlPanel: React.FC<SingularControlPanelProps> = ({ rundownId, 
                 backgroundColor: theme.palette.background.default,
                 border: `1px solid ${theme.palette.divider}`
             }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 2 }}>
-                    Singular Controls
-                </Typography>
-
-                {payloadModel.length > 0 ? (
-                    <Grid container spacing={2}>
-                        {payloadModel
-                            .filter(model => !model.hidden)
-                            .sort((a, b) => a.index - b.index)
-                            .map(model => renderControl(model))
-                        }
-                    </Grid>
-                ) : (
-                    <Typography variant="body2" color="text.secondary">
-                        {singularModel
-                            ? 'No editable fields available for this subcomposition.'
-                            : 'Loading subcomposition data...'}
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: isCollapsed ? 0 : 1 }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                        Singular Controls
                     </Typography>
-                )}
+                    <IconButton
+                        onClick={handleToggleCollapse}
+                        size="small"
+                        sx={{ 
+                            transition: 'transform 0.2s',
+                            transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)'
+                        }}
+                    >
+                        <ExpandMoreIcon fontSize="small" />
+                    </IconButton>
+                </Box>
+
+                <Collapse in={!isCollapsed} timeout={isRowChanging ? 0 : "auto"} unmountOnExit>
+                    {payloadModel.length > 0 ? (
+                        <Grid container spacing={2}>
+                            {payloadModel
+                                .filter(model => !model.hidden)
+                                .sort((a, b) => a.index - b.index)
+                                .map(model => renderControl(model))
+                            }
+                        </Grid>
+                    ) : (
+                        <Typography variant="body2" color="text.secondary">
+                            {singularModel
+                                ? 'No editable fields available for this subcomposition.'
+                                : 'Loading subcomposition data...'}
+                        </Typography>
+                    )}
+                </Collapse>
             </Paper>
         </Box>
     );
