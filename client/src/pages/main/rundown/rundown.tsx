@@ -15,6 +15,7 @@ interface RundownSubcomposition {
     appToken: string;
     appLabel: string;
     logicLayer: { name: string; tag: string };
+    model: any;
 }
 
 interface RundownProps {
@@ -33,6 +34,7 @@ const Rundown: React.FC<RundownProps> = ({ rundownId = 'rundown-1', selectedRowI
         connectionLabel: string;
         appToken: string;
         logicLayer: { name: string; tag: string };
+        model: any;
         fullSubcomposition: Subcomposition | null;
     } | null>(null);
     const [columnWidths, setColumnWidths] = useState(() => {
@@ -175,7 +177,14 @@ const Rundown: React.FC<RundownProps> = ({ rundownId = 'rundown-1', selectedRowI
                 incrementExistingRowOrders();
             }
 
-            //The row that is added to the rundown table
+            //We add the model defaults to the new row added so that the tinybase row is actually populated with the model defaults
+            const modelDefaults = {};
+            if (Array.isArray(subComp.model)) {
+                subComp.model.forEach((item: { id: string; defaultValue: any }) => {
+                    modelDefaults[item.id] = item.defaultValue;
+                });
+            }
+
             return {
                 status: subComp.state || 'Out1',
                 layer: subComp.logicLayer.name || '',
@@ -185,8 +194,9 @@ const Rundown: React.FC<RundownProps> = ({ rundownId = 'rundown-1', selectedRowI
                 subcompId: subComp.id,
                 appToken: subComp.appToken,
                 appLabel: subComp.appLabel,
-                rundownId: rundownId, // Add the rundownId column
+                rundownId: rundownId,
                 order: insertOrder,
+                ...modelDefaults,
             };
         },
         [incrementExistingRowOrders, incrementRowOrdersFromPosition, selectedRowId, rundownTable, rundownId],
@@ -282,6 +292,7 @@ const Rundown: React.FC<RundownProps> = ({ rundownId = 'rundown-1', selectedRowI
                 id: string; 
                 name: string; 
                 logicLayer: { name: string; tag: string };
+                model: any;
             }>;
         }> = [];
 
@@ -296,7 +307,8 @@ const Rundown: React.FC<RundownProps> = ({ rundownId = 'rundown-1', selectedRowI
                     const subcompositions = model.subcompositions.map(sub => ({
                         id: sub.id,
                         name: sub.name,
-                        logicLayer: sub.logicLayer
+                        logicLayer: sub.logicLayer,
+                        model: sub.model
                     }));
 
                     if (subcompositions.length > 0) {
@@ -323,6 +335,7 @@ const Rundown: React.FC<RundownProps> = ({ rundownId = 'rundown-1', selectedRowI
             connectionLabel: string;
             appToken: string;
             logicLayer: { name: string; tag: string };
+            model: any;
             fullSubcomposition: Subcomposition | null;
         }> = [];
 
@@ -334,7 +347,8 @@ const Rundown: React.FC<RundownProps> = ({ rundownId = 'rundown-1', selectedRowI
                     connectionLabel: connection.label,
                     appToken: connection.appToken,
                     logicLayer: sub.logicLayer,
-                    fullSubcomposition: null // TODO: Fetch full subcomposition data when needed for detailed operations
+                    model: sub.model,
+                    fullSubcomposition: null
                 });
             });
         });
@@ -457,6 +471,7 @@ const Rundown: React.FC<RundownProps> = ({ rundownId = 'rundown-1', selectedRowI
                                     logicLayer: value.logicLayer,
                                     appToken: value.appToken,
                                     appLabel: value.connectionLabel,
+                                    model: value.model
                                 };
                                 setSelectedSubcomposition(value);
                                 handleSubcompositionSelect(subComp);

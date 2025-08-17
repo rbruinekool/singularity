@@ -16,9 +16,6 @@ interface SingularControlPanelProps {
     rundownId: string;
 }
 
-// Helper function to generate storage key
-const getStorageKey = (rundownId: string, rowId: string) => `singularControlPanel_${rundownId}_${rowId}_collapsed`;
-
 /**
  * SingularControlPanel component displays and manages controls for a Singular subcomposition row.
  *
@@ -41,37 +38,17 @@ const SingularControlPanel: React.FC<SingularControlPanelProps> = ({ rundownId, 
     const theme = useTheme();
     const [isEditingName, setIsEditingName] = useState(false);
     const [editNameValue, setEditNameValue] = useState('');
-    const [isRowChanging, setIsRowChanging] = useState(false);
     
-    // Collapsible state - stored per row in localStorage
+    // Simple global collapsed state - shared across all components
     const [isCollapsed, setIsCollapsed] = useState(() => {
-        const stored = localStorage.getItem(getStorageKey(rundownId, rowId));
+        const stored = localStorage.getItem('singularControlPanel_collapsed');
         return stored ? JSON.parse(stored) : false; // Default to expanded
     });
     
-    // Update collapsed state when rowId or rundownId changes
-    useEffect(() => {
-        const stored = localStorage.getItem(getStorageKey(rundownId, rowId));
-        const newCollapsedState = stored ? JSON.parse(stored) : false;
-        
-        // Check if we're switching rows (not just initial load)
-        if (newCollapsedState !== isCollapsed) {
-            setIsRowChanging(true);
-            setIsCollapsed(newCollapsedState);
-            
-            // Reset the row changing flag after a short delay
-            const timer = setTimeout(() => {
-                setIsRowChanging(false);
-            }, 50);
-            
-            return () => clearTimeout(timer);
-        }
-    }, [rundownId, rowId]);
-    
     // Update localStorage when collapse state changes
     useEffect(() => {
-        localStorage.setItem(getStorageKey(rundownId, rowId), JSON.stringify(isCollapsed));
-    }, [isCollapsed, rundownId, rowId]);
+        localStorage.setItem('singularControlPanel_collapsed', JSON.stringify(isCollapsed));
+    }, [isCollapsed]);
     
     const handleToggleCollapse = () => {
         setIsCollapsed(!isCollapsed);
@@ -276,7 +253,7 @@ const SingularControlPanel: React.FC<SingularControlPanelProps> = ({ rundownId, 
                     </IconButton>
                 </Box>
 
-                <Collapse in={!isCollapsed} timeout={isRowChanging ? 0 : "auto"} unmountOnExit>
+                <Collapse in={!isCollapsed} timeout="auto" unmountOnExit>
                     {payloadModel.length > 0 ? (
                         <Grid container spacing={2}>
                             {payloadModel

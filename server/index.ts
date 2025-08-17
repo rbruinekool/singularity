@@ -1,10 +1,11 @@
 import { createServer } from 'http';
-import { createMergeableStore } from 'tinybase/mergeable-store';
+import { createMergeableStore, type MergeableStore } from 'tinybase/mergeable-store';
 import { createWsServer } from 'tinybase/synchronizers/synchronizer-ws-server';
 import { WebSocketServer } from 'ws';
 import { createFilePersister } from 'tinybase/persisters/persister-file';
 import { PatchSingular } from './singular/patch-singular.ts';
 import { createLogger } from './utils/logger.ts';
+import { createHttpServer } from './http-server.ts';
 
 
 const store = createMergeableStore();
@@ -30,7 +31,7 @@ const wsServer = createWsServer(
 
 //Animation change listener for Singular compositions
 store.addCellListener(
-  'rundown-1', //TODO add support for more rundowns
+  'rundown-1', 
   null,
   'status',
   async (store, tableId, rowId, cellId, newValue, oldValue, getCellChange) => {
@@ -69,54 +70,12 @@ store.addCellListener(
   }
 )
 
+// Create HTTP server
+const { server: httpServer, updatePeakStats } = createHttpServer(wsServer, store);
+httpServer.listen(8044);
+
 // -- Optional metrics handling hereon
 wsServer.addClientIdsListener(null, () => updatePeakStats());
-const stats = { paths: 0, clients: 0 };
-
-createServer((request, response) => {
-  switch (request.url) {
-    case '/metrics':
-      response.writeHead(200);
-      response.write(`# HELP sub_domains The total number of sub-domains.\n`);
-      response.write(`# TYPE sub_domains gauge\n`);
-      response.write(`sub_domains 1\n`);
-
-      response.write(
-        `# HELP peak_paths The highest number of paths recently managed.\n`,
-      );
-      response.write(`# TYPE peak_paths gauge\n`);
-      response.write(`peak_paths ${stats.paths}\n`);
-
-      response.write(
-        `# HELP peak_clients The highest number of clients recently managed.\n`,
-      );
-      response.write(`# TYPE peak_clients gauge\n`);
-      response.write(`peak_clients ${stats.clients}\n`);
-
-      updatePeakStats(1);
-      break;
-
-    case '/test':
-      response.writeHead(200);
-      //store.setCell('rundown-1', '0', 'name', 'Test value');
-      response.write('Test endpoint is working!');
-      break;
-    default:
-      response.writeHead(404);
-      break;
-  }
-  response.end();
-}).listen(8044);
-
-const updatePeakStats = (reset = 0) => {
-  if (reset) {
-    stats.paths = 0;
-    stats.clients = 0;
-  }
-  const newStats = wsServer.getStats();
-  stats.paths = Math.max(stats.paths, newStats.paths ?? 0);
-  stats.clients = Math.max(stats.clients, newStats.clients ?? 0);
-};
 
 // Memory monitoring and graceful shutdown
 let lastMemoryUsage = 0;
