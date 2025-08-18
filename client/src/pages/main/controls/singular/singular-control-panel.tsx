@@ -13,7 +13,6 @@ import CheckboxControl from './singular-controls/checkbox-control';
 
 interface SingularControlPanelProps {
     rowId: string;
-    rundownId: string;
 }
 
 /**
@@ -28,13 +27,12 @@ interface SingularControlPanelProps {
  *
  * Props:
  * - `rowId`: The unique identifier for the row in the rundown table.
- * - `rundownId`: The unique identifier for the rundown table.
  *
  * @component
  * @param {SingularControlPanelProps} props - The props for the component.
  * @returns {JSX.Element} The rendered SingularControlPanel component.
  */
-const SingularControlPanel: React.FC<SingularControlPanelProps> = ({ rundownId, rowId }) => {
+const SingularControlPanel: React.FC<SingularControlPanelProps> = ({ rowId }) => {
     const theme = useTheme();
     const [isEditingName, setIsEditingName] = useState(false);
     const [editNameValue, setEditNameValue] = useState('');
@@ -54,7 +52,7 @@ const SingularControlPanel: React.FC<SingularControlPanelProps> = ({ rundownId, 
         setIsCollapsed(!isCollapsed);
     };
 
-    const rowData = useRow(rundownId, rowId) || {};
+    const rowData = useRow('rundown-1', rowId) || {};
 
     // Get the connections table (static - no subscription)
     const connections = useTable('connections') || {};
@@ -88,12 +86,12 @@ const SingularControlPanel: React.FC<SingularControlPanelProps> = ({ rundownId, 
 
     // Get the payload model using the subcomposition ID (static)
     const payloadModel = useMemo(() => {
-        if (!singularModel || !rowData.subcompId) return [];
-        return getPayloadModel(singularModel, String(rowData.subcompId));
-    }, [singularModel, rowData.subcompId]);
+        if (!singularModel || !rowData.subCompositionId) return [];
+        return getPayloadModel(singularModel, String(rowData.subCompositionId));
+    }, [singularModel, rowData.subCompositionId]);
 
     // Get the current name value from the store (static)
-    const currentName = useCell(rundownId, rowId, 'name') as string || '';
+    const currentName = useCell('rundown-1', rowId, 'name') as string || '';
 
     const handleNameClick = () => {
         setEditNameValue(currentName);
@@ -101,7 +99,7 @@ const SingularControlPanel: React.FC<SingularControlPanelProps> = ({ rundownId, 
     };
 
     const handleNameSubmit = useSetCellCallback(
-        rundownId,
+        'rundown-1',
         rowId,
         'name',
         () => editNameValue,
@@ -133,7 +131,6 @@ const SingularControlPanel: React.FC<SingularControlPanelProps> = ({ rundownId, 
                     <TextControl
                         key={model.id}
                         model={model}
-                        rundownId={rundownId}
                         rowId={rowId} />
                 );
             case 'textarea':
@@ -141,7 +138,6 @@ const SingularControlPanel: React.FC<SingularControlPanelProps> = ({ rundownId, 
                     <TextareaControl
                         key={model.id}
                         model={model}
-                        rundownId={rundownId}
                         rowId={rowId} />
                 );
             case 'datetime':
@@ -149,7 +145,6 @@ const SingularControlPanel: React.FC<SingularControlPanelProps> = ({ rundownId, 
                     <TimeControl
                         key={model.id}
                         model={model}
-                        rundownId={rundownId}
                         rowId={rowId} />
                 );
             case 'selection':
@@ -157,7 +152,6 @@ const SingularControlPanel: React.FC<SingularControlPanelProps> = ({ rundownId, 
                     <SelectionControl
                         key={model.id}
                         model={model}
-                        rundownId={rundownId}
                         rowId={rowId} />
                 );
             case 'checkbox':
@@ -165,7 +159,6 @@ const SingularControlPanel: React.FC<SingularControlPanelProps> = ({ rundownId, 
                     <CheckboxControl
                         key={model.id}
                         model={model}
-                        rundownId={rundownId}
                         rowId={rowId} />
                 );
             case 'button':

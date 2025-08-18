@@ -1,30 +1,22 @@
 import React, { useState, useMemo } from 'react';
 import { Box, Typography, FormControl, Select, MenuItem, SelectChangeEvent, CircularProgress, Grid } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
-import { useCell, useSetCellCallback } from 'tinybase/ui-react';
 import { useQuery } from '@tanstack/react-query';
 import { Model, Selection } from '../../../../../shared/singular/interfaces/singular-model';
+import { usePayloadValue, useSetPayloadValue } from '../hooks/usePayload';
 
 interface SelectionControlProps {
     model: Model;
-    rundownId: string;
     rowId: string;
 }
 
-const SelectionControl: React.FC<SelectionControlProps> = ({ model, rundownId, rowId }) => {
+const SelectionControl: React.FC<SelectionControlProps> = ({ model, rowId }) => {
     const theme = useTheme();
-
-    // Get the current value from TinyBase
-    const currentValue = useCell(rundownId, rowId, model.id) as string | null;
-
-    // Set cell callback for updating the selected value
-    const setCellValue = useSetCellCallback(
-        rundownId,
-        rowId,
-        model.id,
-        (value: string) => value,
-        []
-    );
+    const rundownId = 'rundown-1';
+    
+    // Use the new payload hooks
+    const currentValue = usePayloadValue(rundownId, rowId, model.id, model.defaultValue || '');
+    const setPayloadValue = useSetPayloadValue(rundownId, rowId, model.id);
 
     // Determine if we need to fetch selections from URL
     const shouldFetchFromUrl = model.source === 'url' && !!model.sourceUrl;
@@ -63,7 +55,7 @@ const SelectionControl: React.FC<SelectionControlProps> = ({ model, rundownId, r
         // Find the selection and store its title
         const selectedOption = selections.find(selection => selection.id === selectedId);
         if (selectedOption) {
-            setCellValue(selectedOption.title);
+            setPayloadValue(selectedOption.title);
         }
     };
 

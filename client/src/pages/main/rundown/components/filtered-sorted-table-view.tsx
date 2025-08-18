@@ -23,6 +23,7 @@ const FilteredSortedTableView: React.FC<FilteredSortedTableViewProps> = ({
         
         const filtered = allRowIds.filter(rowId => {
             const rundownIdForRow = table[rowId]?.rundownId;
+            // Both should now be strings, so direct comparison
             return rundownIdForRow === filterRundownId;
         });
         

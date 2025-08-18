@@ -33,8 +33,8 @@ export interface Model {
     resetValue: string;
     immediateUpdate: boolean;
     selections: Selection[];
-    source: string;
-    sourceUrl: string;
+    source?: string;
+    sourceUrl?: string;
     hideTitle: boolean;
     hidden: boolean;
     style: boolean;

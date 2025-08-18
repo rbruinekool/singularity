@@ -1,5 +1,5 @@
 import type { MergeableStore } from "tinybase";
-import type { Subcomposition } from "./interfaces";
+import type { RundownRow } from "./interfaces";
 import { createLogger } from "../utils/logger.ts";
 
 const logger = createLogger('datastore');
@@ -19,7 +19,7 @@ export function processPatchRequest(store: MergeableStore, patchData: unknown): 
     }
 
     // Get the full rundown-1 table from the store
-    const rundownTable = store.getTable('rundown-1');
+    const rundownTable = store.getTable('rundown-1') as unknown as Record<string, RundownRow>;
     if (!rundownTable) {
         const error = 'Rundown table not found in store';
         logger.error({}, error);
@@ -27,7 +27,7 @@ export function processPatchRequest(store: MergeableStore, patchData: unknown): 
     }
 
     const errors: string[] = [];
-    const validUpdates: Array<{ id: number; data: Record<string, any> }> = [];
+    const validUpdates: Array<{ id: number; data: Partial<RundownRow> }> = [];
 
     // Loop over each object in the incoming array and validate
     for (let i = 0; i < patchData.length; i++) {
@@ -63,7 +63,7 @@ export function processPatchRequest(store: MergeableStore, patchData: unknown): 
         }
 
         // Prepare the data for patching (exclude 'id' property to make it immutable)
-        const { id: _, ...updateData } = item;
+        const { id: _, ...updateData } = item as any;
         validUpdates.push({ id, data: updateData });
     }
 
@@ -77,52 +77,34 @@ export function processPatchRequest(store: MergeableStore, patchData: unknown): 
     try {
         logger.debug({ validUpdates, rundownTableKeys: Object.keys(rundownTable) }, 'Starting store transaction');
         
-        // Create a mapping from API property names to TinyBase column names
-        const propertyMapping: Record<string, string> = {
-            'subCompositionId': 'subcompId',
-            'subCompositionName': 'template', 
-            'rundownName': 'name',
-            'state': 'status'
-        };
-        
         store.transaction(() => {
             for (const update of validUpdates) {
                 const rowId = String(update.id);
                 
                 // Get current row data
                 const currentRow = rundownTable[rowId];
-                logger.debug({ rowId, currentRowKeys: Object.keys(currentRow), updateData: update.data }, 'Processing update for row');
+                logger.debug({ rowId, updateData: update.data }, 'Processing update for row');
                 
-                // Merge the update data with current row (update data takes precedence)
+                // Update each property in the update data
                 for (const [key, value] of Object.entries(update.data)) {
-                    logger.debug({ key, value }, 'Processing key-value pair');
-                    
-                    // Handle payload object specially - merge rather than replace
-                    if (key === 'payload' && typeof value === 'object' && value !== null) {
-                        logger.debug({ payloadValue: value }, 'Processing payload object');
-                        // Merge payload properties directly as cells
-                        for (const [payloadKey, payloadValue] of Object.entries(value)) {
-                            // Ensure payloadValue is a valid Cell type (string, number, or boolean)
-                            if (typeof payloadValue === 'string' || typeof payloadValue === 'number' || typeof payloadValue === 'boolean') {
-                                logger.debug({ rowId, payloadKey, payloadValue }, 'Setting cell for payload property');
-                                store.setCell('rundown-1', rowId, payloadKey, payloadValue);
+                    // Only update properties that exist in the RundownRow interface
+                    if (key in currentRow) {
+                        logger.debug({ rowId, key, value }, 'Setting cell for property');
+                        
+                        // Handle complex objects that need to be serialized
+                        if (typeof value === 'object' && value !== null) {
+                            // For objects like logicLayer or payload, store as JSON string or handle appropriately
+                            if (key === 'logicLayer' || key === 'payload') {
+                                store.setCell('rundown-1', rowId, key, JSON.stringify(value));
                             }
+                        } else {
+                            // For simple values (string, number, boolean)
+                            store.setCell('rundown-1', rowId, key, value as string | number | boolean);
                         }
                     } else {
-                        // Map API property names to TinyBase column names
-                        const mappedKey = propertyMapping[key] || key;
-                        
-                        // Only update if the mapped key exists in current row
-                        if (mappedKey in currentRow) {
-                            logger.debug({ rowId, key, mappedKey, value }, 'Setting cell for direct property');
-                            store.setCell('rundown-1', rowId, mappedKey, value);
-                        } else {
-                            logger.debug({ key, mappedKey }, 'Skipping key - mapped key not found in current row');
-                        }
+                        logger.debug({ key }, 'Skipping key - not found in RundownRow interface');
                     }
                 }
-                // Force listener to update on payload change, even if the animation state did not change
-                store.setCell('rundown-1', rowId, 'update', Date.now());
             }
         });
 
@@ -139,36 +121,46 @@ export function processPatchRequest(store: MergeableStore, patchData: unknown): 
 /**
  * Retrieves the rundown from the TinyBase MergeableStore
  * @param store - The TinyBase MergeableStore instance
- * @returns An array of Subcomposition objects or an empty array if no rundown exists
+ * @returns An array of RundownRow objects with id property added, or an empty array if no rundown exists
  */
-export function getRundown(store: MergeableStore): Subcomposition[] | []{
-    const rundown = store.getTable('rundown-1');
+export function getRundown(store: MergeableStore): Array<RundownRow & { id: number }> {
+    const rundown = store.getTable('rundown-1') as unknown as Record<string, RundownRow>;
     if (!rundown) {
-        return []
+        return [];
     }
 
-    // Columns of the table with these headers will not be included in the payload object
-    const keysNotInPayload = ['Id', 'status', 'layer', 'name', 'template', 'type', 'subcompId','order', 'appToken', 'appLabel', 'rundownId'];
-    return Object.entries(rundown).map(([rowId, row]): Subcomposition => {
-        const subCompId = row.subcompId;
-        const subCompName = row.template;
-        const state = row.status as 'In' | 'Out1' | 'Out2';
-        const payload: Record<string, string | number | boolean> = {};
+    return Object.entries(rundown).map(([rowId, row]): RundownRow & { id: number } => {
+        // Parse payload and logicLayer if they are JSON strings
+        let parsedPayload = row.payload;
+        let parsedLogicLayer = row.logicLayer;
 
-        // Collect all cells that are not the special ones
-        for (const [cellId, cellValue] of Object.entries(row)) {
-            if (!keysNotInPayload.includes(cellId)) {
-                payload[cellId] = cellValue;
+        // Parse payload if it's a JSON string
+        if (typeof row.payload === 'string') {
+            try {
+                parsedPayload = JSON.parse(row.payload);
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : 'Unknown parsing error';
+                logger.warn({ rowId, payload: row.payload, error: errorMessage }, 'Failed to parse payload JSON, using as-is');
+                parsedPayload = row.payload as any;
+            }
+        }
+
+        // Parse logicLayer if it's a JSON string
+        if (typeof row.logicLayer === 'string') {
+            try {
+                parsedLogicLayer = JSON.parse(row.logicLayer);
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : 'Unknown parsing error';
+                logger.warn({ rowId, logicLayer: row.logicLayer, error: errorMessage }, 'Failed to parse logicLayer JSON, using as-is');
+                parsedLogicLayer = row.logicLayer as any;
             }
         }
 
         return {
             id: Number(rowId),
-            subCompositionId: subCompId,
-            subCompositionName: subCompName,
-            rundownName: row.name,
-            state,
-            payload
-        } as Subcomposition;
+            ...row,
+            payload: parsedPayload,
+            logicLayer: parsedLogicLayer
+        };
     });
 }

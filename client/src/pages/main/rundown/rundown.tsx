@@ -5,18 +5,10 @@ import MoreVertIcon from '@mui/icons-material/MoreVert';
 import { useTheme } from '@mui/material/styles';
 import { useAddRowCallback, useStore, useTable, useDelRowCallback, useRowIds } from 'tinybase/ui-react';
 import { Subcomposition, SingularModel } from '../../../shared/singular/interfaces/singular-model';
-import RundownRow from './rundown-row';
+import { RundownRow } from '../../../shared/store/interfaces/rundown-row';
+import { ConnectionRow } from '../../../shared/store/interfaces/connection-row';
+import RundownRowComponent from './rundown-row';
 import FilteredSortedTableView from './components/filtered-sorted-table-view';
-
-interface RundownSubcomposition {
-    id: string;
-    name: string;
-    state: string;
-    appToken: string;
-    appLabel: string;
-    logicLayer: { name: string; tag: string };
-    model: any;
-}
 
 interface RundownProps {
     rundownId?: string;
@@ -28,15 +20,8 @@ interface RundownProps {
 const Rundown: React.FC<RundownProps> = ({ rundownId = 'rundown-1', selectedRowId, onRowSelect, onRowDelete }) => {
     const theme = useTheme();
     const [openAutocomplete, setOpenAutocomplete] = useState(false);
-    const [selectedSubcomposition, setSelectedSubcomposition] = useState<{
-        id: string;
-        name: string;
-        connectionLabel: string;
-        appToken: string;
-        logicLayer: { name: string; tag: string };
-        model: any;
-        fullSubcomposition: Subcomposition | null;
-    } | null>(null);
+    type ExtendedSubcomposition = Subcomposition & { appToken: string; appLabel: string; connectionLabel: string };
+    const [selectedSubcomposition, setSelectedSubcomposition] = useState<ExtendedSubcomposition | null>(null);
     const [columnWidths, setColumnWidths] = useState(() => {
         const saved = localStorage.getItem('columnWidths');
         const defaultWidths = [30, 60, 60, 120, 120, 30];
@@ -155,48 +140,46 @@ const Rundown: React.FC<RundownProps> = ({ rundownId = 'rundown-1', selectedRowI
         incrementRowOrdersFromPosition(-1); // -1 means increment all rows (insert at top)
     }, [incrementRowOrdersFromPosition]);
 
-    const handleSubcompositionSelect = useAddRowCallback(
-        'rundown-1', // Always use the single table
-        (subComp: RundownSubcomposition) => {
+    const handleAddRow = useAddRowCallback(
+        'rundown-1',
+        (subComp: ExtendedSubcomposition) => {
             // Determine where to insert the new row
             let insertOrder = 0; // Default to top
             
             if (selectedRowId) {
-                // Get the order of the currently selected row
                 const selectedRowOrder = rundownTable?.[selectedRowId]?.order;
                 if (typeof selectedRowOrder === 'number') {
                     insertOrder = selectedRowOrder + 1;
-                    // Increment orders of all rows after the selected row
                     incrementRowOrdersFromPosition(selectedRowOrder);
                 } else {
-                    // Fallback: if selected row has no order, insert at top
                     incrementExistingRowOrders();
                 }
             } else {
-                // No row selected, insert at top
                 incrementExistingRowOrders();
             }
 
-            //We add the model defaults to the new row added so that the tinybase row is actually populated with the model defaults
-            const modelDefaults = {};
+            // Create payload from model defaults
+            const payload: { [key: string]: number | string | boolean } = {};
             if (Array.isArray(subComp.model)) {
                 subComp.model.forEach((item: { id: string; defaultValue: any }) => {
-                    modelDefaults[item.id] = item.defaultValue;
+                    payload[item.id] = item.defaultValue;
                 });
             }
 
+            // Return TinyBase Row structure (not RundownRow interface)
             return {
-                status: subComp.state || 'Out1',
-                layer: subComp.logicLayer.name || '',
-                name: subComp.name,
-                template: subComp.name,
-                type: 'subcomposition',
-                subcompId: subComp.id,
+                subCompositionId: subComp.id,
+                subCompositionName: subComp.name,
+                state: 'Out1',
+                logicLayer: JSON.stringify(subComp.logicLayer), // Stringify complex objects for TinyBase
+                payload: JSON.stringify(payload), // Stringify payload object
                 appToken: subComp.appToken,
-                appLabel: subComp.appLabel,
-                rundownId: rundownId,
+                name: subComp.name,
+                rundownId: rundownId, // Keep as string, don't parseInt
+                type: 'subcomposition',
                 order: insertOrder,
-                ...modelDefaults,
+                appLabel: subComp.appLabel,
+                update: Date.now()
             };
         },
         [incrementExistingRowOrders, incrementRowOrdersFromPosition, selectedRowId, rundownTable, rundownId],
@@ -278,83 +261,39 @@ const Rundown: React.FC<RundownProps> = ({ rundownId = 'rundown-1', selectedRowI
         updateRowOrders(rowIds);
     }, [store, updateRowOrders, rundownId, rundownTableRowIds, rundownTable]);
 
-    //const subcompositions: Subcomposition[] = data[0]?.subcompositions ? data[0].subcompositions : [];
-    const connections = useTable('connections');
+    // Get connections table with proper typing
+    const connectionsTable = useTable('connections');
 
-    // Create array of subcompositions from connections for autocomplete
-    const connectionSubcompositions = useMemo(() => {
-        if (!connections) return [];
+    // Create autocomplete options from connections
+    const autocompleteOptions = useMemo(() => {
+        if (!connectionsTable) return [];
 
-        const result: Array<{
-            label: string;
-            appToken: string;
-            subcompositions: Array<{ 
-                id: string; 
-                name: string; 
-                logicLayer: { name: string; tag: string };
-                model: any;
-            }>;
-        }> = [];
+        const options: ExtendedSubcomposition[] = [];
 
-        Object.entries(connections).forEach(([rowId, row]) => {
+        Object.entries(connectionsTable).forEach(([rowId, connectionRow]) => {
             try {
-                const label = row.label as string;
-                const appToken = row.appToken as string;
-                const modelString = row.model as string;
+                const connectionData = connectionRow as any;
+                const { label, appToken, model: modelString } = connectionData;
 
                 if (label && appToken && modelString) {
                     const model: SingularModel = JSON.parse(modelString);
-                    const subcompositions = model.subcompositions.map(sub => ({
-                        id: sub.id,
-                        name: sub.name,
-                        logicLayer: sub.logicLayer,
-                        model: sub.model
-                    }));
-
-                    if (subcompositions.length > 0) {
-                        result.push({
-                            label,
+                    
+                    model.subcompositions.forEach(subComp => {
+                        options.push({
+                            ...subComp,
                             appToken,
-                            subcompositions
+                            appLabel: label,
+                            connectionLabel: label
                         });
-                    }
+                    });
                 }
             } catch (error) {
                 console.error(`Error parsing model for connection ${rowId}:`, error);
             }
         });
 
-        return result;
-    }, [connections]);
-
-    // Flatten subcompositions for autocomplete with grouping info
-    const autocompleteOptions = useMemo(() => {
-        const options: Array<{
-            id: string;
-            name: string;
-            connectionLabel: string;
-            appToken: string;
-            logicLayer: { name: string; tag: string };
-            model: any;
-            fullSubcomposition: Subcomposition | null;
-        }> = [];
-
-        connectionSubcompositions.forEach(connection => {
-            connection.subcompositions.forEach(sub => {
-                options.push({
-                    id: sub.id,
-                    name: sub.name,
-                    connectionLabel: connection.label,
-                    appToken: connection.appToken,
-                    logicLayer: sub.logicLayer,
-                    model: sub.model,
-                    fullSubcomposition: null
-                });
-            });
-        });
-
         return options;
-    }, [connectionSubcompositions]);
+    }, [connectionsTable]);
 
 
     const dragBoxSx = { position: 'absolute', right: '-5px', top: 0, bottom: 0, width: '10px', cursor: 'col-resize', zIndex: 1 }
@@ -417,7 +356,7 @@ const Rundown: React.FC<RundownProps> = ({ rundownId = 'rundown-1', selectedRowI
                             cellId={'order'}
                             filterRundownId={rundownId}
                             rowComponent={(props) => (
-                                <RundownRow
+                                <RundownRowComponent
                                     {...props}
                                     columnWidths={columnWidths}
                                     tableId="rundown-1"
@@ -464,17 +403,8 @@ const Rundown: React.FC<RundownProps> = ({ rundownId = 'rundown-1', selectedRowI
                         )}
                         onChange={(event, value) => {
                             if (value) {
-                                const subComp: RundownSubcomposition = {
-                                    id: value.id,
-                                    name: value.name,
-                                    state: 'OFF', // Default state
-                                    logicLayer: value.logicLayer,
-                                    appToken: value.appToken,
-                                    appLabel: value.connectionLabel,
-                                    model: value.model
-                                };
                                 setSelectedSubcomposition(value);
-                                handleSubcompositionSelect(subComp);
+                                handleAddRow(value);
                             }
                         }}
                         onBlur={() => {

@@ -1,37 +1,30 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Box, Typography, FormControlLabel, Checkbox, Grid } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
-import { useCell, useSetCellCallback } from 'tinybase/ui-react';
 import { Model } from '../../../../../shared/singular/interfaces/singular-model';
+import { usePayloadValue, useSetPayloadValue } from '../hooks/usePayload';
 
 interface CheckboxControlProps {
     model: Model;
-    rundownId: string;
     rowId: string;
 }
 
-const CheckboxControl: React.FC<CheckboxControlProps> = ({ model, rundownId, rowId }) => {
+const CheckboxControl: React.FC<CheckboxControlProps> = ({ model,  rowId }) => {
     const theme = useTheme();
+    const rundownId = 'rundown-1';
 
-    // Get the current value from TinyBase
-    const currentValue = useCell(rundownId, rowId, model.id) as boolean | null;
-
-    // Set cell callback for updating the checkbox value
-    const setCellValue = useSetCellCallback(
-        rundownId,
-        rowId,
-        model.id,
-        (value: boolean) => value,
-        []
-    );
+    // Use the new payload hooks
+    const defaultValue = model.defaultValue === 'true' || model.defaultValue === 'True' || (typeof model.defaultValue === 'boolean' && model.defaultValue === true);
+    const currentValue = usePayloadValue(rundownId, rowId, model.id, defaultValue);
+    const setPayloadValue = useSetPayloadValue(rundownId, rowId, model.id);
 
     // Handle checkbox change
     const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        setCellValue(event.target.checked);
+        setPayloadValue(event.target.checked);
     };
 
     // Determine the current checked state
-    const isChecked = currentValue === true || (currentValue === null && model.defaultValue === 'true');
+    const isChecked = currentValue === true;
 
     return (
         <Grid size={{ md: 12, lg: 6 }}>

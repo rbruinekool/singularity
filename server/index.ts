@@ -1,4 +1,3 @@
-import { createServer } from 'http';
 import { createMergeableStore, type MergeableStore } from 'tinybase/mergeable-store';
 import { createWsServer } from 'tinybase/synchronizers/synchronizer-ws-server';
 import { WebSocketServer } from 'ws';
@@ -18,9 +17,6 @@ let connectionCount = 0;
 const wsServer = createWsServer(
   new WebSocketServer({
     port: 8043,
-    // Add connection limits for development
-    maxPayload: 16 * 1024 * 1024, // 16MB max payload
-    perMessageDeflate: false, // Disable compression to reduce memory usage
   }),
   // Store state as json
   (pathId) => (createFilePersister(
@@ -33,18 +29,17 @@ const wsServer = createWsServer(
 store.addCellListener(
   'rundown-1', 
   null,
-  'status',
+  'state',
   async (store, tableId, rowId, cellId, newValue, oldValue, getCellChange) => {
     const animationStates = ['In', 'Out1', 'Out2'];
     if (typeof newValue !== 'string') return;
     if (!animationStates.includes(newValue)) return;
 
-    logger.info({
-      tableId,
-      rowId,
-      oldValue,
-      newValue
-    }, 'Animation status changed');
+    // logger.info({
+    //   rowId,
+    //   oldValue,
+    //   newValue
+    // }, 'Animation status changed');
 
     // Use the consolidated PatchSingular function with animation state
     await PatchSingular(store, tableId, rowId, newValue as 'In' | 'Out1' | 'Out2');
@@ -57,13 +52,12 @@ store.addCellListener(
   null,
   'update',
   async (store, tableId, rowId, cellId, newValue, oldValue, getCellChange) => {
-    logger.info({
-      tableId,
-      rowId,
-      cellId,
-      newValue,
-      oldValue
-    }, 'Component data updated');
+    // logger.info({
+    //   rowId,
+    //   cellId,
+    //   newValue,
+    //   oldValue
+    // }, 'Component data updated');
 
     // Use the consolidated PatchSingular function without animation state (payload update only)
     await PatchSingular(store, tableId, rowId);
@@ -109,7 +103,6 @@ const monitorMemory = () => {
 
   if (memoryUsageMB > 1024) { // 1GB critical threshold
     console.error('🚨 Critical memory usage detected!');
-    console.error('This might be caused by development mode rebuilds');
     console.error('Consider restarting both server and client');
   }
 };

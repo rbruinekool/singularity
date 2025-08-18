@@ -1,42 +1,35 @@
 import React, { useState } from 'react';
 import { Box, Typography, TextField, Grid } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
-import { CellView, useCell, useRow, useSetCellCallback, useStore } from 'tinybase/ui-react';
 import { Model } from '../../../../../shared/singular/interfaces/singular-model';
+import { usePayloadValue, useSetPayloadValue } from '../hooks/usePayload';
 
 interface TextControlProps {
     model: Model;
     value?: string;
-    rundownId: string;
     rowId: string;
 }
 
-const TextControl: React.FC<TextControlProps> = ({ model, rundownId, rowId }) => {
+const TextControl: React.FC<TextControlProps> = ({ model, rowId }) => {
     const theme = useTheme();
     const [isEditing, setIsEditing] = useState(false);
     const [editValue, setEditValue] = useState('');
+    const rundownId = 'rundown-1';
 
-    const cell = useCell(rundownId, rowId, model.id);
-    let storeValue = '';
-    if (typeof cell === 'string') {
-        storeValue = cell;
-    } else if (typeof model.defaultValue === 'string') {
-        storeValue = model.defaultValue;
-    }
+    // Use the new payload hooks
+    const storeValue = usePayloadValue(rundownId, rowId, model.id, model.defaultValue || '');
+    const setPayloadValue = useSetPayloadValue(rundownId, rowId, model.id);
 
     // Get the current value from the store
     const handleClick = () => {
-        setEditValue(storeValue);
+        setEditValue(String(storeValue));
         setIsEditing(true);
     };
 
-    const handleNameSubmit = useSetCellCallback(
-        rundownId,
-        rowId,
-        model.id,
-        () => editValue,
-        [editValue]
-    );
+    const handleSubmit = () => {
+        setPayloadValue(editValue);
+        setIsEditing(false);
+    };
 
     const handleCancel = () => {
         setIsEditing(false);
@@ -45,8 +38,7 @@ const TextControl: React.FC<TextControlProps> = ({ model, rundownId, rowId }) =>
 
     const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
         if (event.key === 'Enter') {
-            handleNameSubmit();
-            setIsEditing(false);
+            handleSubmit();
         } else if (event.key === 'Escape') {
             handleCancel();
         }
@@ -64,7 +56,7 @@ const TextControl: React.FC<TextControlProps> = ({ model, rundownId, rowId }) =>
                     <TextField
                         value={editValue}
                         onChange={(e) => setEditValue(e.target.value)}
-                        onBlur={handleNameSubmit}
+                        onBlur={handleSubmit}
                         onKeyDown={handleKeyDown}
                         placeholder={model.defaultValue}
                         size="small"
@@ -101,7 +93,7 @@ const TextControl: React.FC<TextControlProps> = ({ model, rundownId, rowId }) =>
                             }
                         }}
                     >
-                        {storeValue || model.defaultValue}
+                        {String(storeValue) || model.defaultValue}
                     </Box>
                 )}
                 {model.source && (

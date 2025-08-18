@@ -34,6 +34,7 @@ const RootRoute = createRootRoute({
     const serverPathId = location.pathname;
     const store = useCreateMergeableStore(() => createMergeableStore());
 
+
     useCreatePersister(
       store,
       (store) =>
@@ -60,7 +61,7 @@ const RootRoute = createRootRoute({
 
       return synchronizer;
     });
-
+    
     return (
       <Provider store={store}>
         <ThemeProvider theme={theme}>

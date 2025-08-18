@@ -6,6 +6,18 @@ import MenuIcon from '@mui/icons-material/Menu';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import UpgradeIcon from '@mui/icons-material/Upgrade';
 
+// Component to handle the logicLayer JSON field
+const LogicLayerCell: React.FC<{ tableId: string; rowId: string }> = ({ tableId, rowId }) => {
+    const logicLayerString = useCell(tableId, rowId, 'logicLayer') as string;
+    
+    try {
+        const logicLayer = JSON.parse(logicLayerString || '{}');
+        return <span>{logicLayer.name || 'N/A'}</span>;
+    } catch {
+        return <span>N/A</span>;
+    }
+};
+
 interface RundownRowProps {
     rowId: string;
     columnWidths: number[];
@@ -39,7 +51,7 @@ const RundownRow: React.FC<RundownRowProps> = ({
     // Check if this row is selected
     const isSelected = selectedRowId === rowId;
 
-    const rowStatus = useCell(tableId, rowId, 'status') as string;
+    const rowStatus = useCell(tableId, rowId, 'state') as string;
 
 
     const cellSx = {
@@ -48,27 +60,17 @@ const RundownRow: React.FC<RundownRowProps> = ({
         ...theme.typography.body1,
     };
 
-    // const handlePlayClick = () => {
-    //     if (!store) throw new Error('Store is not available');
-    //     store.setCell('rundown-1', rowId, 'status', 'In');
-    // }
-
-    // const handleStopClick = () => {
-    //     if (!store) throw new Error('Store is not available');
-    //     store.setCell('rundown-1', rowId, 'status', 'Out1');
-    // }
-
     const handleStopClick = useSetCellCallback(
         'rundown-1',
         rowId,
-        'status',
+        'state',
         () => 'Out1',
         [rowId]
     );
     const handlePlayClick = useSetCellCallback(
         'rundown-1',
         rowId,
-        'status',
+        'state',
         () => 'In',
         [rowId]
     );
@@ -226,11 +228,11 @@ const RundownRow: React.FC<RundownRowProps> = ({
                     <CellView tableId={tableId} rowId={rowId} cellId="appLabel" />
                 </TableCell>
                 <TableCell sx={{ ...cellSx, width: columnWidths[4] }}>
-                    <CellView tableId={tableId} rowId={rowId} cellId="template" />
+                    <CellView tableId={tableId} rowId={rowId} cellId="subCompositionName" />
                 </TableCell>
                 <TableCell sx={{ ...cellSx, width: columnWidths[5] }}>
                     <Box display="flex" alignItems="center" justifyContent="space-between">
-                        <CellView tableId={tableId} rowId={rowId} cellId="layer" />
+                        <LogicLayerCell tableId={tableId} rowId={rowId} />
                         <IconButton
                             size="small"
                             aria-label="More options"

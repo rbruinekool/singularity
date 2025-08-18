@@ -1,34 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Typography, TextField, FormControl, FormLabel, RadioGroup, FormControlLabel, Radio, Button, InputAdornment, Grid } from '@mui/material';
 import { AccessTime } from '@mui/icons-material';
-import { useSetCellCallback, useCell } from 'tinybase/ui-react';
 import { Model } from '../../../../../shared/singular/interfaces/singular-model';
+import { usePayloadValue, useSetPayloadValue } from '../hooks/usePayload';
 
 interface TimeControlProps {
     model: Model;
-    rundownId: string;
     rowId: string;
 }
 
-const TimeControl: React.FC<TimeControlProps> = ({ model, rundownId, rowId }) => {
+const TimeControl: React.FC<TimeControlProps> = ({ model, rowId }) => {
     const [controlMode, setControlMode] = useState<'manual' | 'countdown' | 'startOnPlay'>('manual');
     const [manualTimeInput, setManualTimeInput] = useState('');
     const [countdownTimeInput, setCountdownTimeInput] = useState('');
     const [startOnPlayInput, setStartOnPlayInput] = useState('');
     const [inputError, setInputError] = useState('');
     const [currentTime, setCurrentTime] = useState(Date.now()); // For dynamic countdown
+    const rundownId = 'rundown-1';
 
-    // Get current value from TinyBase
-    const currentValue = useCell(rundownId, rowId, model.id) as number | string | null;
-
-    // Set cell callback for updating the timestamp or string value
-    const setCellValue = useSetCellCallback(
-        rundownId,
-        rowId,
-        model.id,
-        (value: number | string) => value,
-        []
-    );
+    // Use the new payload hooks
+    const currentValue = usePayloadValue(rundownId, rowId, model.id, model.defaultValue || null);
+    const setPayloadValue = useSetPayloadValue(rundownId, rowId, model.id);
 
     // Initialize component state from stored value
     useEffect(() => {
@@ -142,7 +134,7 @@ const TimeControl: React.FC<TimeControlProps> = ({ model, rundownId, rowId }) =>
         }
         
         setInputError('');
-        setCellValue(timestamp);
+        setPayloadValue(timestamp);
         setManualTimeInput(''); // Clear the input after successful submission
     };
 
@@ -161,7 +153,7 @@ const TimeControl: React.FC<TimeControlProps> = ({ model, rundownId, rowId }) =>
         }
         
         setInputError('');
-        setCellValue(timestamp);
+        setPayloadValue(timestamp);
     };
 
     // Handle start-on-play time input
@@ -179,7 +171,7 @@ const TimeControl: React.FC<TimeControlProps> = ({ model, rundownId, rowId }) =>
         }
         
         setInputError('');
-        setCellValue(`::add-${durationMs}`);
+        setPayloadValue(`::add-${durationMs}`);
         setStartOnPlayInput(''); // Clear the input after successful submission
     };
 
@@ -230,7 +222,7 @@ const TimeControl: React.FC<TimeControlProps> = ({ model, rundownId, rowId }) =>
                     onClick={() => {
                         const timestamp = parseManualTime(timeStr);
                         if (timestamp !== null) {
-                            setCellValue(timestamp);
+                            setPayloadValue(timestamp);
                             setInputError('');
                         }
                     }}
@@ -261,7 +253,7 @@ const TimeControl: React.FC<TimeControlProps> = ({ model, rundownId, rowId }) =>
                     onClick={() => {
                         const durationMs = parseStartOnPlayTime(timeStr);
                         if (durationMs !== null) {
-                            setCellValue(`::add-${durationMs}`);
+                            setPayloadValue(`::add-${durationMs}`);
                             setInputError('');
                         }
                     }}

@@ -1,6 +1,5 @@
 import { createLogger } from "../utils/logger.ts";
-import { createSingularPayload } from "./create-singular-payload.ts";
-import type { SingularConnection, SingularModel } from "./interfaces.ts";
+import type { RundownRow } from "../datastore/interfaces.ts";
 
 const logger = createLogger('patch-singular');
 
@@ -20,7 +19,7 @@ export const PatchSingular = async (
     animateTo?: AnimationState
 ) => {
     // Get the row from the store
-    const row = store.getRow(tableId, rowId);
+    const row = store.getRow(tableId, rowId) as unknown as RundownRow;
     if (!row) {
         logger.error({ tableId, rowId }, 'Row not found in table');
         return;
@@ -28,52 +27,38 @@ export const PatchSingular = async (
 
     const componentName = row.name;
 
-    // Check for required cells
-    if (!store.hasCell(tableId, rowId, 'subcompId') || !store.hasCell(tableId, rowId, 'appToken')) {
+    // Check for required properties
+    if (!row.subCompositionId || !row.appToken) {
         logger.error({ 
             componentName, 
             tableId, 
             row 
-        }, 'Component missing required subcompId or appToken cells');
+        }, 'Component missing required subCompositionId or appToken');
         return;
     }
 
-    const subCompId = row.subcompId;
+    const subCompId = row.subCompositionId;
     const appToken = row.appToken;
 
-    // Get connections table to find model data
-    const connections = store.getTable('connections') as SingularConnection[];
-    if (!connections) {
-        logger.error({ 
-            componentName, 
-            tableId,
-            rowId,
-            subCompId 
-        }, 'Table connections not found when patching Singular');
-        return;
-    }
-
-    const connectionEntry = Object.values(connections).find(
-        (entry: any) => entry.appToken === appToken
-    );
-
+    // Parse the payload if it's stored as a JSON string
     let payload = {};
-    let model: SingularModel;
-
-    // Always try to create payload if we have model data
-    if (connectionEntry?.model && typeof connectionEntry.model === 'string') {
-        try {
-            model = JSON.parse(connectionEntry.model);
-            payload = createSingularPayload(row, model) || {};
-        } catch (e) {
-            logger.error({ 
-                error: e, 
-                componentName, 
-                tableId,
-                rowId,
-                appToken: appToken.substring(0, 8) + '...',
-                subCompId 
-            }, 'Failed to parse model JSON when creating Singular payload');
+    if (row.payload) {
+        if (typeof row.payload === 'string') {
+            try {
+                payload = JSON.parse(row.payload);
+            } catch (parseError) {
+                logger.warn({ 
+                    componentName, 
+                    tableId,
+                    rowId,
+                    payload: row.payload,
+                    error: parseError instanceof Error ? parseError.message : 'Unknown error'
+                }, 'Failed to parse payload JSON, using empty payload');
+                payload = {};
+            }
+        } else {
+            // Payload is already an object
+            payload = row.payload;
         }
     }
 

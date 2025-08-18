@@ -152,7 +152,7 @@ const Main: React.FC = () => {
                 {selectedRowId ? (
                     <>
                         {rowType === 'subcomposition' ? (
-                            <SingularControlPanel rundownId={'rundown-1'} rowId={selectedRowId} />
+                            <SingularControlPanel rowId={selectedRowId} />
                         ) : (
                             <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
                                 <div>Unknown row type: {rowType}</div>

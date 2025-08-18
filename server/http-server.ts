@@ -36,48 +36,51 @@ export const createHttpServer = (wsServer: any, store: MergeableStore) => {
                         request.on('data', chunk => {
                             body += chunk.toString();
                         });
-                        
+
                         request.on('end', () => {
                             try {
                                 const jsonData = JSON.parse(body);
                                 logger.info({ body: jsonData }, 'PATCH request received');
-                                
+
                                 // Process the PATCH request using the new function
                                 const result = processPatchRequest(store, jsonData);
-                                
+
                                 if (result.success) {
                                     response.writeHead(200, { 'Content-Type': 'application/json' });
-                                    response.write(JSON.stringify({ 
-                                        success: true, 
+                                    response.write(JSON.stringify({
+                                        success: true,
                                         message: result.message
                                     }));
                                 } else {
                                     response.writeHead(400, { 'Content-Type': 'application/json' });
-                                    response.write(JSON.stringify({ 
-                                        success: false, 
+                                    response.write(JSON.stringify({
+                                        success: false,
                                         error: result.message,
                                         details: result.errors || []
                                     }));
                                 }
                                 response.end();
-                                
+
                             } catch (error) {
-                                logger.error({ error: error.message, body }, 'Failed to parse JSON body');
+                                const errorMessage = typeof error === 'object' && error !== null && 'message' in error
+                                    ? (error as { message: string }).message
+                                    : String(error);
+                                logger.error({ error: errorMessage, body }, 'Failed to parse JSON body');
                                 response.writeHead(400, { 'Content-Type': 'application/json' });
-                                response.write(JSON.stringify({ 
-                                    success: false, 
-                                    error: 'Invalid JSON in request body' 
+                                response.write(JSON.stringify({
+                                    success: false,
+                                    error: 'Invalid JSON in request body'
                                 }));
                                 response.end();
                             }
                         });
-                        
+
                         request.on('error', (error) => {
                             logger.error({ error: error.message }, 'Error reading request body');
                             response.writeHead(500, { 'Content-Type': 'application/json' });
-                            response.write(JSON.stringify({ 
-                                success: false, 
-                                error: 'Error reading request body' 
+                            response.write(JSON.stringify({
+                                success: false,
+                                error: 'Error reading request body'
                             }));
                             response.end();
                         });
@@ -108,7 +111,7 @@ export const createHttpServer = (wsServer: any, store: MergeableStore) => {
                 response.end();
                 return;
 
-                        case '/metrics':
+            case '/metrics':
                 response.writeHead(200, { 'Content-Type': 'text/plain' });
                 response.write(`# HELP sub_domains The total number of sub-domains.\n`);
                 response.write(`# TYPE sub_domains gauge\n`);
