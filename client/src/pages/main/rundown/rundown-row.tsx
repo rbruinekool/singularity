@@ -161,17 +161,17 @@ const RundownRow: React.FC<RundownRowProps> = ({
                     backgroundColor: rowStatus === 'In'
                         ? theme.custom.live
                         : isSelected
-                            ? theme.palette.action.selected
+                            ? theme.custom.selected
                             : isDragOver
-                                ? theme.palette.action.hover
+                                ? theme.custom.hover
                                 : undefined,
                     cursor: 'pointer',
                     '&:hover': {
                         backgroundColor: rowStatus === 'In'
                             ? theme.custom.liveHover
                             : isSelected
-                                ? theme.palette.action.selected
-                                : theme.palette.action.hover,
+                                ? theme.custom.selected
+                                : theme.custom.hover,
                     }
                 }}
             >

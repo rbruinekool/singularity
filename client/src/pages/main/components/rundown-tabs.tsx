@@ -89,10 +89,10 @@ const RundownTabs: React.FC<RundownTabsProps> = ({
                             marginRight: '0px',
                             padding: '4px 12px',
                             backgroundColor: activeRundownId === rundown.id 
-                                ? theme.palette.primary.main 
+                                ? theme.custom.selected
                                 : theme.palette.background.paper,
                             color: activeRundownId === rundown.id 
-                                ? theme.palette.primary.contrastText 
+                                ? theme.palette.text.primary 
                                 : theme.palette.text.secondary,
                             borderTopLeftRadius: '6px',
                             borderTopRightRadius: '6px',
@@ -110,8 +110,11 @@ const RundownTabs: React.FC<RundownTabsProps> = ({
                                 : 'polygon(4px 0%, calc(100% - 4px) 0%, calc(100% - 2px) 100%, 2px 100%)',
                             '&:hover': {
                                 backgroundColor: activeRundownId === rundown.id 
-                                    ? theme.palette.primary.dark 
-                                    : theme.palette.action.hover,
+                                    ? theme.custom.selected
+                                    : theme.custom.hover,
+                                color: activeRundownId === rundown.id 
+                                    ? theme.palette.text.primary
+                                    : theme.palette.text.primary,
                             },
                             // Add shadow for depth
                             boxShadow: activeRundownId === rundown.id 
@@ -129,7 +132,7 @@ const RundownTabs: React.FC<RundownTabsProps> = ({
                                     left: 0,
                                     right: 0,
                                     height: '2px',
-                                    backgroundColor: theme.palette.primary.main,
+                                    backgroundColor: theme.custom.selected,
                                 }}
                             />
                         )}

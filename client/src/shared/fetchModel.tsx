@@ -6,7 +6,7 @@ export const fetchModel = async (appToken: string): Promise<SingularModel > => {
         throw new Error('Network response was not ok');
     }
     const data = await response.json();
-    if(!data || !data[0].subcompositions || !data[0].name || !data[0].id){
+    if(!data || !data[0].subcompositions || !data[0].id){
         throw new Error('Invalid singular model data received');
     }
 

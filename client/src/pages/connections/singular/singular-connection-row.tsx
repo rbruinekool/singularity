@@ -57,22 +57,41 @@ const ConnectionRow: React.FC<ConnectionRowProps> = ({ tableId, rowId }) => {
         []
     );
 
-    const handleRenewClick = () => {
+    const handleRenewClick = async () => {
         // Renew logic for Singular Control Apps
         if (connectionType === 'singular-control-app') {
             if (appToken && typeof appToken === 'string') {
                 setIsRenewing(true);
-                fetchModel(appToken)
-                    .then(model => {
-                        setModel(JSON.stringify(model))
-                        setUpdateTime();
-                    })
-                    .catch(error => {
-                        console.error('Failed to renew connection:', error);
-                    })
-                    .finally(() => {
-                        setIsRenewing(false);
-                    });
+
+                //Send Refresh command to Singular Control App
+                const options = {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ action: "RefreshComposition" }),
+                }
+
+                try {
+                    const res = await fetch(`https://app.singular.live/apiv2/controlapps/${appToken}/command`, options);
+                    if (!res.ok) {
+                        throw new Error(`HTTP error! status: ${res.status}`);
+                    }
+                    console.info('Refresh command sent successfully to Singular Control App');
+                } catch (error) {
+                    console.error('Failed to send refresh command to Singular:', error);
+                }
+
+                try {
+                    // Fetch the latest model and save it in store
+                    const model = await fetchModel(appToken);
+                    setModel(JSON.stringify(model));
+                    setUpdateTime();
+                } catch (error) {
+                    console.error('Failed to renew connection:', error);
+                } finally {
+                    setIsRenewing(false);
+                }
             }
         }
     };

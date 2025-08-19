@@ -5,8 +5,6 @@ import MoreVertIcon from '@mui/icons-material/MoreVert';
 import { useTheme } from '@mui/material/styles';
 import { useAddRowCallback, useStore, useTable, useDelRowCallback, useRowIds } from 'tinybase/ui-react';
 import { Subcomposition, SingularModel } from '../../../shared/singular/interfaces/singular-model';
-import { RundownRow } from '../../../shared/store/interfaces/rundown-row';
-import { ConnectionRow } from '../../../shared/store/interfaces/connection-row';
 import RundownRowComponent from './rundown-row';
 import FilteredSortedTableView from './components/filtered-sorted-table-view';
 
@@ -166,7 +164,6 @@ const Rundown: React.FC<RundownProps> = ({ rundownId = 'rundown-1', selectedRowI
                 });
             }
 
-            // Return TinyBase Row structure (not RundownRow interface)
             return {
                 subCompositionId: subComp.id,
                 subCompositionName: subComp.name,

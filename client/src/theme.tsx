@@ -7,6 +7,8 @@ declare module '@mui/material/styles' {
       autocompleteBackground: string;
       live: string;
       liveHover: string;
+      selected: string;
+      hover: string;
     };
   }
   interface ThemeOptions {
@@ -14,6 +16,8 @@ declare module '@mui/material/styles' {
       autocompleteBackground?: string;
       live?: string;
       liveHover?: string;
+      selected?: string;
+      hover?: string;
     };
   }
 }
@@ -75,5 +79,7 @@ export const themeOptions: ThemeOptions = {
     autocompleteBackground: '#333333', // Custom property for autocomplete background
     live: '#732222', // Custom property for live row background
     liveHover: '#8B3333', // Custom property for live row hover background (lighter)
+    selected: '#434e6d', // Custom property for consistent selected state
+    hover: '#2a3a5c', // Custom property for consistent hover state (lighter blue)
   },
 };

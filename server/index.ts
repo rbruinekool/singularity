@@ -107,8 +107,8 @@ const monitorMemory = () => {
   }
 };
 
-// Monitor memory every 5 minutes
-setInterval(monitorMemory, 2 * 60 * 1000);
+// Monitor memory every second for development
+setInterval(monitorMemory, 1000);
 
 // Graceful shutdown handlers
 const gracefulShutdown = (signal: string) => {
