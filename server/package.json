@@ -7,9 +7,9 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "start": "LOG_LEVEL=warn node --experimental-strip-types --max-old-space-size=2048 index.ts",
-    "dev": "LOG_LEVEL=debug node --experimental-strip-types --max-old-space-size=2048 index.ts",
-    "start:silent": "LOG_LEVEL=silent node --experimental-strip-types --max-old-space-size=2048 index.ts"
+    "start": "cross-env LOG_LEVEL=warn node --experimental-strip-types --max-old-space-size=2048 index.ts",
+    "dev": "cross-env LOG_LEVEL=debug node --experimental-strip-types --max-old-space-size=2048 index.ts",
+    "start:silent": "cross-env LOG_LEVEL=silent node --experimental-strip-types --max-old-space-size=2048 index.ts"
   },
   "dependencies": {
     "pino": "^9.9.0",
@@ -19,6 +19,7 @@
   },
   "devDependencies": {
     "@flydotio/dockerfile": "^0.7.9",
-    "@types/ws": "^8.18.0"
+    "@types/ws": "^8.18.0",
+    "cross-env": "^10.0.0"
   }
 }

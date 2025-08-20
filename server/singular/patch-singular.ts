@@ -117,7 +117,7 @@ export const PatchSingular = async (
             subCompId, 
             animateTo,
             response: data 
-        }, 'Successfully sent control command to Singular Live');
+        }, 'Singular Response to Patch request');
 
     } catch (error: any) {
         clearTimeout(timeoutId);

@@ -33,13 +33,15 @@ store.addCellListener(
   async (store, tableId, rowId, cellId, newValue, oldValue, getCellChange) => {
     const animationStates = ['In', 'Out1', 'Out2'];
     if (typeof newValue !== 'string') return;
+    if (typeof oldValue !== 'string') return;
     if (!animationStates.includes(newValue)) return;
+    if (!animationStates.includes(oldValue)) return;
 
-    // logger.info({
-    //   rowId,
-    //   oldValue,
-    //   newValue
-    // }, 'Animation status changed');
+    logger.debug({
+      rowId,
+      oldValue,
+      newValue
+    }, 'Animation status changed');
 
     // Use the consolidated PatchSingular function with animation state
     await PatchSingular(store, tableId, rowId, newValue as 'In' | 'Out1' | 'Out2');
@@ -52,12 +54,14 @@ store.addCellListener(
   null,
   'update',
   async (store, tableId, rowId, cellId, newValue, oldValue, getCellChange) => {
-    // logger.info({
-    //   rowId,
-    //   cellId,
-    //   newValue,
-    //   oldValue
-    // }, 'Component data updated');
+        if (typeof newValue !== 'number') return;
+    if (typeof oldValue !== 'number') return;
+    logger.debug({
+      rowId,
+      cellId,
+      newValue,
+      oldValue
+    }, 'Component data updated');
 
     // Use the consolidated PatchSingular function without animation state (payload update only)
     await PatchSingular(store, tableId, rowId);
@@ -126,7 +130,7 @@ const gracefulShutdown = (signal: string) => {
   setTimeout(() => {
     console.log('Graceful shutdown completed');
     process.exit(0);
-  }, 1000);
+  }, 60000);
 };
 
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
