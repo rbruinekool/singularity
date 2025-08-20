@@ -130,7 +130,7 @@ const gracefulShutdown = (signal: string) => {
   setTimeout(() => {
     console.log('Graceful shutdown completed');
     process.exit(0);
-  }, 60000);
+  }, 1000);
 };
 
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
