@@ -7,13 +7,13 @@ import { createLogger } from './utils/logger.ts';
 import { createHttpServer } from './http-server.ts';
 
 
-const store = createMergeableStore();
 const logger = createLogger('server');
 
 // Add connection tracking for memory monitoring
 const connectionTracker = new Map();
 let connectionCount = 0;
 
+const store = createMergeableStore();
 const wsServer = createWsServer(
   new WebSocketServer({
     port: 8043,
