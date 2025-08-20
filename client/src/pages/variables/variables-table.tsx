@@ -85,38 +85,32 @@ const VariablesTable: React.FC = () => {
     const variableRowIds = useRowIds('variables') || [];
     const variablesTable = useTable('variables');
     
-    // Track previous row IDs to detect new rows
-    const prevRowIdsRef = useRef<string[]>([]);
-    
-    // Effect to detect when new rows are added
+    // Set up listener for row additions to trigger blinking animation
     useEffect(() => {
-        const prevRowIds = prevRowIdsRef.current;
-        const currentRowIds = variableRowIds;
-        
-        // Find newly added rows
-        const newRowIds = currentRowIds.filter(id => !prevRowIds.includes(id));
-        
-        if (newRowIds.length > 0) {
-            // Add new rows to blinking set
+        if (!store) return;
+
+        const listenerId = store.addRowListener('variables', null, (store, tableId, rowId, getCellChange) => {
+            // This listener fires when a row is added to the variables table
             setBlinkingRows(prev => {
                 const newSet = new Set(prev);
-                newRowIds.forEach(id => newSet.add(id));
+                newSet.add(rowId);
                 return newSet;
             });
             
-            // Remove rows from blinking set after animation completes (1 blink = ~600ms)
+            // Remove the row from blinking set after animation completes
             setTimeout(() => {
                 setBlinkingRows(prev => {
                     const newSet = new Set(prev);
-                    newRowIds.forEach(id => newSet.delete(id));
+                    newSet.delete(rowId);
                     return newSet;
                 });
             }, 600);
-        }
-        
-        // Update previous row IDs
-        prevRowIdsRef.current = currentRowIds;
-    }, [variableRowIds]);
+        });
+
+        return () => {
+            store.delListener(listenerId);
+        };
+    }, [store]);
     
     // CSS animation for blinking effect
     const blinkAnimation = keyframes`
@@ -455,6 +449,10 @@ const VariablesTable: React.FC = () => {
         fontSize: theme.typography.body1.fontSize,
         fontWeight: theme.typography.fontWeightRegular,
         borderBottom: `1px solid ${theme.palette.divider}`,
+        borderRight: `1px solid ${theme.palette.divider}`,
+        '&:last-child': {
+            borderRight: 'none'
+        }
     };
     
     const filterCellSx = {
@@ -837,6 +835,10 @@ const VariableRow: React.FC<VariableRowProps> = ({
         fontSize: theme.typography.body1.fontSize,
         fontWeight: theme.typography.fontWeightRegular,
         borderBottom: `1px solid ${theme.palette.divider}`,
+        borderRight: `1px solid ${theme.palette.divider}`,
+        '&:last-child': {
+            borderRight: 'none'
+        }
     };
     
     return (
