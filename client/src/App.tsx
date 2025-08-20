@@ -20,9 +20,10 @@ import { RouterProvider, Outlet, Link, Navigate, createRouter, createRootRoute, 
 import NavTabs from './components/navtabs';
 import Connections from './pages/connections';
 import Main from './pages/main';
+import Variables from './pages/variables';
 
 const SERVER_SCHEME = 'ws://';
-const SERVER = 'localhost:8043'; //TODO: fix to make this work for remote clients
+const SERVER = '10.12.6.107:8043'; //TODO: fix to make this work for remote clients
 
 const queryClient = new QueryClient();
 const theme = createTheme(themeOptions);
@@ -96,7 +97,12 @@ const ConnectionsRoute = createRoute({
   path: 'connections',
   component: Connections,
 });
-const routeTree = RootRoute.addChildren([IndexRoute, MainRoute, ConnectionsRoute]);
+const VariablesRoute = createRoute({
+  getParentRoute: () => RootRoute,
+  path: 'variables',
+  component: Variables,
+});
+const routeTree = RootRoute.addChildren([IndexRoute, MainRoute, ConnectionsRoute, VariablesRoute]);
 const router = createRouter({ routeTree });
 
 export const App = () => {

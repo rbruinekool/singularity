@@ -8,7 +8,8 @@ const NavTabs = () => {
   const currentPath = useRouterState({ select: state => state.location.pathname });
   const tabs = [
     { label: 'Rundown', to: '/main' },
-    { label: 'Connections', to: '/connections' }
+    { label: 'Connections', to: '/connections' },
+    { label: 'Variables', to: '/variables' }
   ];
   return (
     <div style={{ display: 'flex', gap: 32 }}>

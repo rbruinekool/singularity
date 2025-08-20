@@ -9,6 +9,7 @@ declare module '@mui/material/styles' {
       liveHover: string;
       selected: string;
       hover: string;
+      filterRow: string;
     };
   }
   interface ThemeOptions {
@@ -18,6 +19,7 @@ declare module '@mui/material/styles' {
       liveHover?: string;
       selected?: string;
       hover?: string;
+      filterRow?: string;
     };
   }
 }
@@ -81,5 +83,6 @@ export const themeOptions: ThemeOptions = {
     liveHover: '#8B3333', // Custom property for live row hover background (lighter)
     selected: '#434e6d', // Custom property for consistent selected state
     hover: '#2a3a5c', // Custom property for consistent hover state
+    filterRow: '#1a2544', // Custom property for filter row background (subtle)
   },
 };
