@@ -16,14 +16,16 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import AppBar from '@mui/material/AppBar';
 import Toolbar from '@mui/material/Toolbar';
-import { RouterProvider, Outlet, Link, Navigate, createRouter, createRootRoute, createRoute } from '@tanstack/react-router';
+import { RouterProvider, Outlet, Navigate, createRouter, createRootRoute, createRoute } from '@tanstack/react-router';
 import NavTabs from './components/navtabs';
 import Connections from './pages/connections';
 import Main from './pages/main';
 import Variables from './pages/variables';
 
 const SERVER_SCHEME = 'ws://';
-const SERVER = '10.12.6.107:8043'; //TODO: fix to make this work for remote clients
+const SERVER_HOST = import.meta.env.VITE_SERVER_HOST || 'localhost';
+const SERVER_PORT = import.meta.env.VITE_SERVER_PORT || '8043';
+const SERVER = `${SERVER_HOST}:${SERVER_PORT}`;
 
 const queryClient = new QueryClient();
 const theme = createTheme(themeOptions);

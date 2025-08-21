@@ -13,28 +13,20 @@ import {
     DialogTitle,
     DialogContent,
     DialogActions,
-    Typography,
     Box,
-    IconButton,
-    Menu,
-    MenuItem,
     useTheme,
     Snackbar,
     keyframes
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
-import MoreVertIcon from '@mui/icons-material/MoreVert';
-import MenuIcon from '@mui/icons-material/Menu';
 import { 
     useStore, 
     useTable, 
-    useRowIds, 
-    useCell,
-    useDelRowCallback
+    useRowIds
 } from 'tinybase/ui-react';
+import VariableRow from './components/variable-row';
 
 interface SortConfig {
     key: string;
@@ -85,59 +77,41 @@ const VariablesTable: React.FC = () => {
     const variableRowIds = useRowIds('variables') || [];
     const variablesTable = useTable('variables');
     
-    // Set up listener for row additions to trigger blinking animation
+    // Track row count to detect new rows for blinking animation
+    const currentRowIds = useRowIds('variables');
+    const prevRowCountRef = useRef(currentRowIds.length);
+    
     useEffect(() => {
-        if (!store) return;
-
-        const listenerId = store.addRowListener('variables', null, (store, tableId, rowId, getCellChange) => {
-            // This listener fires when a row is added to the variables table
-            setBlinkingRows(prev => {
-                const newSet = new Set(prev);
-                newSet.add(rowId);
-                return newSet;
-            });
-            
-            // Remove the row from blinking set after animation completes
-            setTimeout(() => {
+        const currentRowCount = currentRowIds.length;
+        if (currentRowCount > prevRowCountRef.current) {
+            // A new row was added - find the newest row (assuming it's the last one)
+            const newestRowId = currentRowIds[currentRowCount - 1];
+            if (newestRowId) {
+                // Add the row to blinking set to trigger animation
                 setBlinkingRows(prev => {
                     const newSet = new Set(prev);
-                    newSet.delete(rowId);
+                    newSet.add(newestRowId);
                     return newSet;
                 });
-            }, 600);
-        });
-
-        return () => {
-            store.delListener(listenerId);
-        };
-    }, [store]);
+                
+                // Remove the row from blinking set after animation completes
+                setTimeout(() => {
+                    setBlinkingRows(prev => {
+                        const newSet = new Set(prev);
+                        newSet.delete(newestRowId);
+                        return newSet;
+                    });
+                }, 600);
+            }
+        }
+        prevRowCountRef.current = currentRowCount;
+    }, [currentRowIds]);
     
     // CSS animation for blinking effect
     const blinkAnimation = keyframes`
         0%, 100% { background-color: transparent; }
-        50% { background-color: ${theme.palette.primary.main}33; }
+        50% { background-color: ${theme.palette.primary.main}; }
     `;
-    
-    
-    // Generate unique variable name
-    const generateVariableName = useCallback(() => {
-        const existingNames = variableRowIds.map(id => {
-            const name = store?.getCell('variables', id, 'name') as string || '';
-            const match = name.match(/\$\(custom:(.+)\)/);
-            return match ? match[1] : '';
-        }).filter(Boolean);
-        
-        let counter = 1;
-        let baseName = 'variable';
-        let newName = `${baseName} ${counter}`;
-        
-        while (existingNames.includes(newName)) {
-            counter++;
-            newName = `${baseName} ${counter}`;
-        }
-        
-        return `$(custom:${newName})`;
-    }, [variableRowIds, store]);
     
     // Check if variable name already exists
     const isVariableNameTaken = useCallback((name: string) => {
@@ -189,6 +163,41 @@ const VariablesTable: React.FC = () => {
             handleDialogSubmit();
         }
     };
+
+    // Handle duplicate variable - opens dialog with pre-filled values
+    const handleDuplicateVariable = useCallback((rowId: string) => {
+        if (!store) return;
+
+        const row = store.getRow('variables', rowId);
+        if (!row) return;
+
+        const originalName = row.name as string;
+        
+        // Generate unique name for duplicate
+        const match = originalName.match(/\$\(custom:(.+)\)/);
+        const baseName = match ? match[1] : 'variable';
+        
+        const existingNames = variableRowIds.map(id => {
+            const existingName = store.getCell('variables', id, 'name') as string || '';
+            const existingMatch = existingName.match(/\$\(custom:(.+)\)/);
+            return existingMatch ? existingMatch[1] : '';
+        }).filter(Boolean);
+        
+        let counter = 1;
+        let newName = `${baseName} copy`;
+        while (existingNames.includes(newName)) {
+            counter++;
+            newName = `${baseName} copy ${counter}`;
+        }
+
+        // Pre-fill dialog with duplicated values
+        setNewVariable({
+            name: newName,
+            description: row.description as string || '',
+            value: row.value as string || ''
+        });
+        setAddDialogOpen(true);
+    }, [store, variableRowIds]);
     
     // Add new variable row (removed old implementation)
     // const addNewVariable = useAddRowCallback(
@@ -345,105 +354,6 @@ const VariablesTable: React.FC = () => {
         setEditValue('');
     }, []);
     
-    // Cell component for rendering editable cells
-    const EditableCell: React.FC<{ 
-        rowId: string; 
-        field: string; 
-        value: string; 
-        showCopyIcon?: boolean 
-    }> = ({ rowId, field, value, showCopyIcon = false }) => {
-        const isEditing = editingCell?.rowId === rowId && editingCell?.field === field;
-        
-        if (isEditing) {
-            return (
-                <Box 
-                    display="flex" 
-                    alignItems="center" 
-                    gap={0.5}
-                    sx={{ 
-                        minHeight: '24px',
-                        width: '100%'
-                    }}
-                >
-                    <TextField
-                        value={editValue}
-                        onChange={(e) => setEditValue(e.target.value)}
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleCellSave();
-                            if (e.key === 'Escape') handleCellCancel();
-                        }}
-                        onBlur={handleCellSave}
-                        autoFocus
-                        size="small"
-                        variant="outlined"
-                        sx={{ 
-                            flex: 1,
-                            '& .MuiInputBase-root': { 
-                                fontSize: theme.typography.body1.fontSize,
-                                minHeight: '24px'
-                            },
-                            '& .MuiInputBase-input': {
-                                padding: '4px 8px'
-                            }
-                        }}
-                    />
-                    {/* Reserve space for copy icon to prevent layout shift */}
-                    {showCopyIcon && (
-                        <Box sx={{ width: '24px', height: '24px', marginLeft: '4px' }} />
-                    )}
-                </Box>
-            );
-        }
-        
-        const displayValue = field === 'name' && value ? 
-            value : value; // Show full programmatic name for name field
-        
-        const showPlaceholder = !displayValue && (field === 'description' || field === 'value');
-        const placeholderText = field === 'description' ? 'Click to add description...' : 'Click to add value...';
-        const isNameField = field === 'name';
-        
-        return (
-            <Box 
-                display="flex" 
-                alignItems="center" 
-                gap={0.5}
-                onClick={() => !isNameField && handleCellClick(rowId, field)}
-                sx={{ 
-                    cursor: isNameField ? 'default' : 'pointer', 
-                    minHeight: '24px' 
-                }}
-            >
-                <Typography 
-                    variant="body1"
-                    sx={{
-                        fontStyle: showPlaceholder ? 'italic' : 'normal',
-                        color: showPlaceholder ? theme.palette.text.disabled : theme.palette.text.primary,
-                        opacity: showPlaceholder ? 0.7 : 1
-                    }}
-                >
-                    {showPlaceholder ? placeholderText : (displayValue || '')}
-                </Typography>
-                {showCopyIcon && value && (
-                    <IconButton
-                        size="small"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            handleCopyVariableName(value);
-                        }}
-                        sx={{ 
-                            color: theme.palette.text.secondary,
-                            '&:hover': { color: theme.palette.primary.main },
-                            padding: '2px',
-                            marginLeft: '4px'
-                        }}
-                    >
-                        <ContentCopyIcon fontSize="small" />
-                    </IconButton>
-                )}
-            </Box>
-        );
-    };
-    
     const cellSx = {
         padding: '8px 12px',
         fontSize: theme.typography.body1.fontSize,
@@ -461,12 +371,18 @@ const VariablesTable: React.FC = () => {
     };
     
     const headerCellSx = {
-        ...cellSx,
-        backgroundColor: theme.palette.background.default,
-        fontWeight: theme.typography.fontWeightMedium,
+        backgroundColor: theme.palette.background.paper,
+        fontWeight: theme.typography.fontWeightBold,
         cursor: 'pointer',
+        padding: '8px',
+        paddingLeft: '16px',
+        borderBottom: `1px solid ${theme.palette.divider}`,
+        borderRight: '1px solid rgba(200, 200, 200, 0.1)',
         '&:hover': {
             backgroundColor: theme.custom.hover,
+        },
+        '&:last-child': {
+            borderRight: 'none'
         }
     };
 
@@ -497,7 +413,7 @@ const VariablesTable: React.FC = () => {
             >
                 <Table size="small" stickyHeader sx={{ tableLayout: 'fixed' }}>
                     <TableHead>
-                        <TableRow>
+                        <TableRow sx={{ backgroundColor: theme.palette.background.paper }}>
                             <TableCell sx={{ ...headerCellSx, width: '40px', textAlign: 'center' }}>
                                 #
                             </TableCell>
@@ -552,9 +468,6 @@ const VariablesTable: React.FC = () => {
                                         <ArrowDownwardIcon fontSize="small" />
                                     )}
                                 </Box>
-                            </TableCell>
-                            <TableCell sx={{ ...headerCellSx, width: '60px', textAlign: 'center' }}>
-                                Actions
                             </TableCell>
                         </TableRow>
                         
@@ -613,15 +526,12 @@ const VariablesTable: React.FC = () => {
                                     }}
                                 />
                             </TableCell>
-                            <TableCell sx={{ ...filterCellSx, width: '60px' }}>
-                                {/* Empty cell for actions column */}
-                            </TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
                         {filteredAndSortedRowIds.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={6} sx={{ ...cellSx, textAlign: 'center', fontStyle: 'italic' }}>
+                                <TableCell colSpan={5} sx={{ ...cellSx, textAlign: 'center', fontStyle: 'italic' }}>
                                     {variableRowIds.length === 0 ? 
                                         'No variables yet. Click the + button to add one.' :
                                         'No variables match the current filters.'
@@ -634,7 +544,6 @@ const VariablesTable: React.FC = () => {
                                     key={rowId} 
                                     rowId={rowId} 
                                     rowNumber={index + 1}
-                                    EditableCell={EditableCell}
                                     onDragStart={(rowId) => { draggedRowIdRef.current = rowId; }}
                                     onDragOver={setDragOverRowId}
                                     onDrop={(targetRowId) => {
@@ -647,6 +556,14 @@ const VariablesTable: React.FC = () => {
                                     isDragOver={rowId === dragOverRowId}
                                     isBlinking={blinkingRows.has(rowId)}
                                     blinkAnimation={blinkAnimation}
+                                    onDuplicate={handleDuplicateVariable}
+                                    editingCell={editingCell}
+                                    editValue={editValue}
+                                    onCellClick={handleCellClick}
+                                    onEditValueChange={setEditValue}
+                                    onCellSave={handleCellSave}
+                                    onCellCancel={handleCellCancel}
+                                    onCopyVariableName={handleCopyVariableName}
                                 />
                             ))
                         )}
@@ -717,227 +634,6 @@ const VariablesTable: React.FC = () => {
                 </DialogActions>
             </Dialog>
         </Box>
-    );
-};
-
-// Variable row component
-interface VariableRowProps {
-    rowId: string;
-    rowNumber: number;
-    EditableCell: React.FC<{ rowId: string; field: string; value: string; showCopyIcon?: boolean }>;
-    onDragStart?: (rowId: string) => void;
-    onDragOver?: (rowId: string) => void;
-    onDrop?: (rowId: string) => void;
-    isDragOver?: boolean;
-    isBlinking?: boolean;
-    blinkAnimation?: any;
-}
-
-const VariableRow: React.FC<VariableRowProps> = ({ 
-    rowId, 
-    rowNumber,
-    EditableCell,
-    onDragStart,
-    onDragOver,
-    onDrop,
-    isDragOver,
-    isBlinking,
-    blinkAnimation
-}) => {
-    const theme = useTheme();
-    const rowRef = useRef<HTMLTableRowElement>(null);
-    const store = useStore();
-    const variableRowIds = useRowIds('variables') || [];
-    
-    const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-    const menuOpen = Boolean(anchorEl);
-    
-    const name = useCell('variables', rowId, 'name') as string || '';
-    const description = useCell('variables', rowId, 'description') as string || '';
-    const value = useCell('variables', rowId, 'value') as string || '';
-    const type = useCell('variables', rowId, 'type') as string || '';
-    
-    const handleDragStart = (e: React.DragEvent) => {
-        // Use the entire row as the drag image
-        if (rowRef.current) {
-            e.dataTransfer.setDragImage(rowRef.current, 0, 0);
-        }
-        onDragStart?.(rowId);
-    };
-
-    const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => {
-        event.stopPropagation();
-        setAnchorEl(event.currentTarget);
-    };
-
-    const handleMenuClose = () => {
-        setAnchorEl(null);
-    };
-
-    const handleDeleteClick = useDelRowCallback(
-        'variables',
-        rowId,
-        undefined,
-        () => {
-            handleMenuClose();
-        }
-    );
-
-    const handleDuplicateClick = () => {
-        if (!store) return;
-
-        store.transaction(() => {
-            // Get the original row data
-            const originalRow = store.getRow('variables', rowId);
-            if (!originalRow) return;
-
-            const originalOrder = originalRow.order as number;
-            const originalName = originalRow.name as string;
-
-            // Generate unique name for duplicate
-            const match = originalName.match(/\$\(custom:(.+)\)/);
-            const baseName = match ? match[1] : 'variable';
-            
-            const existingNames = variableRowIds.map(id => {
-                const existingName = store.getCell('variables', id, 'name') as string || '';
-                const existingMatch = existingName.match(/\$\(custom:(.+)\)/);
-                return existingMatch ? existingMatch[1] : '';
-            }).filter(Boolean);
-            
-            let counter = 1;
-            let newName = `${baseName} copy`;
-            while (existingNames.includes(newName)) {
-                counter++;
-                newName = `${baseName} copy ${counter}`;
-            }
-
-            // Increment orders of all rows below the current one
-            variableRowIds.forEach((id) => {
-                const currentOrder = store.getCell('variables', id, 'order');
-                if (typeof currentOrder === 'number' && currentOrder > originalOrder) {
-                    store.setCell('variables', id, 'order', currentOrder + 1);
-                }
-            });
-
-            // Create new row with duplicated data
-            store.addRow('variables', {
-                ...originalRow,
-                name: `$(custom:${newName})`,
-                order: originalOrder + 1,
-            });
-        });
-
-        handleMenuClose();
-    };
-    
-    const cellSx = {
-        padding: '8px 12px',
-        fontSize: theme.typography.body1.fontSize,
-        fontWeight: theme.typography.fontWeightRegular,
-        borderBottom: `1px solid ${theme.palette.divider}`,
-        borderRight: `1px solid ${theme.palette.divider}`,
-        '&:last-child': {
-            borderRight: 'none'
-        }
-    };
-    
-    return (
-        <>
-            <TableRow
-                ref={rowRef}
-                sx={{
-                    '&:hover': {
-                        backgroundColor: theme.custom.hover,
-                    },
-                    bgcolor: isDragOver ? 'action.hover' : 'inherit',
-                    ...(isBlinking && {
-                        animation: `${blinkAnimation} 0.6s ease-in-out`
-                    })
-                }}
-                onDragOver={(e) => {
-                    e.preventDefault();
-                    onDragOver?.(rowId);
-                }}
-                onDrop={() => onDrop?.(rowId)}
-            >
-                <TableCell 
-                    sx={{ 
-                        ...cellSx,
-                        width: 40, 
-                        pl: 1, 
-                        pr: 1, 
-                        textAlign: 'center',
-                        cursor: 'grab',
-                        '&:active': { cursor: 'grabbing' }
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    <Box 
-                        sx={{ 
-                            display: 'flex', 
-                            flexDirection: 'column', 
-                            alignItems: 'center', 
-                            gap: 0.5 
-                        }}
-                        draggable
-                        onDragStart={handleDragStart}
-                    >
-                        <MenuIcon sx={{ color: 'text.secondary', fontSize: 16 }} />
-                        <Typography variant="body2" sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
-                            {rowNumber}
-                        </Typography>
-                    </Box>
-                </TableCell>
-                <TableCell sx={{ ...cellSx, width: 150 }}>
-                    <EditableCell rowId={rowId} field="name" value={name} showCopyIcon />
-                </TableCell>
-                <TableCell sx={{ ...cellSx, width: 200 }}>
-                    <EditableCell rowId={rowId} field="description" value={description} />
-                </TableCell>
-                <TableCell sx={{ ...cellSx, width: 250 }}>
-                    <EditableCell rowId={rowId} field="value" value={value} />
-                </TableCell>
-                <TableCell sx={{ ...cellSx, width: 100 }}>
-                    <EditableCell rowId={rowId} field="dataType" value={type} />
-                </TableCell>
-                <TableCell sx={{ ...cellSx, width: 60, textAlign: 'center' }}>
-                    <IconButton
-                        size="small"
-                        aria-label="More options"
-                        onClick={handleMenuClick}
-                        sx={{ color: theme.palette.text.secondary }}
-                    >
-                        <MoreVertIcon fontSize="small" />
-                    </IconButton>
-                </TableCell>
-            </TableRow>
-
-            <Menu
-                anchorEl={anchorEl}
-                open={menuOpen}
-                onClose={handleMenuClose}
-                anchorOrigin={{
-                    vertical: 'bottom',
-                    horizontal: 'right',
-                }}
-                transformOrigin={{
-                    vertical: 'top',
-                    horizontal: 'right',
-                }}
-                PaperProps={{
-                    sx: {
-                        minWidth: '120px',
-                    }
-                }}
-            >
-                <MenuItem onClick={handleDuplicateClick}>
-                    Duplicate
-                </MenuItem>
-                <MenuItem onClick={handleDeleteClick} sx={{ color: theme.palette.error.main }}>
-                    Delete
-                </MenuItem>
-            </Menu>
-        </>
     );
 };
 

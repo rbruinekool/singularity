@@ -1,0 +1,60 @@
+<svg width="400" height="400" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Radial gradient for the accretion disk -->
+    <radialGradient id="accretionGradient" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#000000;stop-opacity:1" />
+      <stop offset="20%" style="stop-color:#330000;stop-opacity:1" />
+      <stop offset="40%" style="stop-color:#ff4500;stop-opacity:0.9" />
+      <stop offset="70%" style="stop-color:#ffd700;stop-opacity:0.7" />
+      <stop offset="100%" style="stop-color:#ffffff;stop-opacity:0.4" />
+    </radialGradient>
+    
+    <!-- Circular gradient for full disk coverage -->
+    <radialGradient id="diskGradient" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#000000;stop-opacity:1" />
+      <stop offset="25%" style="stop-color:#1a0000;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#ff4500;stop-opacity:0.8" />
+      <stop offset="75%" style="stop-color:#ffd700;stop-opacity:0.6" />
+      <stop offset="100%" style="stop-color:#ffffff;stop-opacity:0.2" />
+    </radialGradient>
+    
+    <!-- Gradient for the event horizon -->
+    <radialGradient id="eventHorizon" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#000000;stop-opacity:1" />
+      <stop offset="90%" style="stop-color:#000000;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#111111;stop-opacity:0.9" />
+    </radialGradient>
+    
+    <!-- Glow effect -->
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+      <feMerge> 
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Outer accretion disk layer -->
+  <circle cx="200" cy="200" r="180" fill="url(#diskGradient)" opacity="0.3"/>
+  
+  <!-- Middle accretion disk -->
+  <circle cx="200" cy="200" r="120" fill="url(#accretionGradient)" opacity="0.6"/>
+  
+  <!-- Inner bright accretion disk -->
+  <circle cx="200" cy="200" r="80" fill="url(#accretionGradient)" opacity="0.8"/>
+  
+  <!-- Photon sphere ring -->
+  <circle cx="200" cy="200" r="70" fill="none" stroke="#ff6600" stroke-width="2" opacity="0.7" filter="url(#glow)"/>
+  
+  <!-- Event horizon (black hole) -->
+  <circle cx="200" cy="200" r="50" fill="url(#eventHorizon)"/>
+  
+  <!-- Gravitational lensing effects -->
+  <circle cx="200" cy="200" r="90" fill="none" stroke="#ffaa00" stroke-width="1" opacity="0.3"/>
+  <circle cx="200" cy="200" r="100" fill="none" stroke="#ff8800" stroke-width="1" opacity="0.2"/>
+  
+  <!-- Jets -->
+  <line x1="200" y1="20" x2="200" y2="130" stroke="#4488ff" stroke-width="4" opacity="0.7" filter="url(#glow)"/>
+  <line x1="200" y1="380" x2="200" y2="270" stroke="#4488ff" stroke-width="4" opacity="0.7" filter="url(#glow)"/>
+</svg>
