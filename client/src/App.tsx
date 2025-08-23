@@ -21,6 +21,7 @@ import NavTabs from './components/navtabs';
 import Connections from './pages/connections';
 import Main from './pages/main';
 import Variables from './pages/variables';
+import Tables from './pages/tables';
 
 const SERVER_SCHEME = 'ws://';
 const SERVER_HOST = import.meta.env.VITE_SERVER_HOST || 'localhost';
@@ -34,14 +35,15 @@ const theme = createTheme(themeOptions);
 const RootRoute = createRootRoute({
   component: () => {
     // These hooks must be called inside the component
-    const serverPathId = location.pathname;
+    //const serverPathId = location.pathname;
     const store = useCreateMergeableStore(() => createMergeableStore());
-
 
     useCreatePersister(
       store,
-      (store) =>
-        createSessionPersister(store, 'local://' + SERVER + serverPathId),
+      (store) => {
+        console.log('persister created');
+        return createSessionPersister(store, 'local://' + SERVER);
+      },
       [],
       async (persister) => {
         await persister.startAutoLoad();
@@ -52,19 +54,24 @@ const RootRoute = createRootRoute({
     useCreateSynchronizer(store, async (store: MergeableStore) => {
       const synchronizer = await createWsSynchronizer(
         store,
-        new ReconnectingWebSocket(SERVER_SCHEME + SERVER + serverPathId),
+        new ReconnectingWebSocket(SERVER_SCHEME + SERVER),
         1
       );
       await synchronizer.startSync();
 
       // If the websocket reconnects in the future, do another explicit sync.
       synchronizer.getWebSocket().addEventListener('open', () => {
+        console.log('websocket reconnected, forcing sync')
         synchronizer.load().then(() => synchronizer.save());
       });
 
       return synchronizer;
     });
-    
+
+    //store.delTable('0');
+    //store.delTable('1');
+    //store.delTable('2');
+    //store.delTable('DataTables');
     return (
       <Provider store={store}>
         <ThemeProvider theme={theme}>
@@ -104,7 +111,12 @@ const VariablesRoute = createRoute({
   path: 'variables',
   component: Variables,
 });
-const routeTree = RootRoute.addChildren([IndexRoute, MainRoute, ConnectionsRoute, VariablesRoute]);
+const TablesRoute = createRoute({
+  getParentRoute: () => RootRoute,
+  path: 'tables',
+  component: Tables,
+});
+const routeTree = RootRoute.addChildren([IndexRoute, MainRoute, ConnectionsRoute, VariablesRoute, TablesRoute]);
 const router = createRouter({ routeTree });
 
 export const App = () => {

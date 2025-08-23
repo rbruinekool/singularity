@@ -9,7 +9,8 @@ const NavTabs = () => {
   const tabs = [
     { label: 'Rundown', to: '/main' },
     { label: 'Connections', to: '/connections' },
-    { label: 'Variables', to: '/variables' }
+    { label: 'Variables', to: '/variables' },
+    { label: 'Tables', to: '/tables' }
   ];
   return (
     <div style={{ display: 'flex', gap: 32 }}>
@@ -22,11 +23,11 @@ const NavTabs = () => {
             to={tab.to}
             style={{
               textDecoration: 'none',
-              color: isActive ? '#1976d2' : '#444',
+              color: isActive ? theme.palette.primary.main : '#1976d2',
               fontWeight: 600,
               fontSize: 16,
               padding: '8px 0',
-              borderBottom: isActive ? '3px solid #1976d2' : '3px solid transparent',
+              borderBottom: isActive ? `3px solid ${theme.palette.primary.main}` : '3px solid transparent',
               transition: 'border-bottom 0.2s',
               ...theme.typography.h5
             }}
