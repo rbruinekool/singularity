@@ -2,9 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { Box } from '@mui/material';
 import { useDrop } from 'react-dnd';
 import TableCard from './table-card';
-import { Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, MenuItem, Box as MuiBox } from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
-import { useStore, useAddRowCallback, useRowIds } from 'tinybase/ui-react';
+import { useStore, useRowIds } from 'tinybase/ui-react';
 
 export interface TableCardData {
     id: string;
@@ -25,31 +23,6 @@ const TableCardGrid: React.FC<TableCardGridProps> = ({ searchFilter }) => {
     // TinyBase hooks
     const store = useStore();
     const tableRowIds = useRowIds('DataTables') || [];
-
-    // Add Table dialog state
-    const [addDialogOpen, setAddDialogOpen] = useState(false);
-    const [newTableName, setNewTableName] = useState('');
-    const [newTableType, setNewTableType] = useState('Manual');
-
-    // Helper: check if table name exists
-    const isTableNameTaken = (name: string) => {
-        return tableRowIds.some(id => store?.getCell('DataTables', id, 'name') === name);
-    };
-
-    // Add table callback
-    const addTable = useAddRowCallback(
-        'DataTables',
-        () => ({
-            name: newTableName.trim(),
-            type: newTableType,
-            updated: Date.now(),
-            x: 20,
-            y: 20,
-            width: 400,
-            height: 300,
-        }),
-        [newTableName, newTableType]
-    );
 
     // Add card to grid when table is added
     useEffect(() => {
@@ -365,18 +338,25 @@ const TableCardGrid: React.FC<TableCardGridProps> = ({ searchFilter }) => {
     const dropRef = React.useRef<HTMLDivElement>(null);
     drop(dropRef);
 
+    // Delete table and corresponding DataTables row
+    const handleDeleteTable = useCallback((tableId: string) => {
+        if (!store) return;
+        // Get the table name from DataTables
+        const row = tableRowIds.find(id => id === tableId);
+        if (!row) return;
+        const tableName = store.getCell('DataTables', row, 'name');
+        if (!tableName) return;
+        const tinybaseTableId = `$${tableName}$`;
+        store.transaction(() => {
+            store.delTable(tinybaseTableId);
+            store.delRow('DataTables', row);
+        });
+        // Optionally, update cards state to remove the deleted card immediately
+        setCards(prev => prev.filter(card => card.id !== tableId));
+    }, [store, tableRowIds]);
+
     return (
         <>
-            <MuiBox sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
-                <Button
-                    variant="contained"
-                    startIcon={<AddIcon />}
-                    onClick={() => setAddDialogOpen(true)}
-                    sx={{ backgroundColor: 'primary.main', '&:hover': { backgroundColor: 'primary.dark' } }}
-                >
-                    Add Table
-                </Button>
-            </MuiBox>
             <Box
                 ref={dropRef}
                 onClick={deselectAll}
@@ -437,59 +417,11 @@ const TableCardGrid: React.FC<TableCardGridProps> = ({ searchFilter }) => {
                             onResizePreview={previewResize}
                             onResizeEnd={clearResizeGuides}
                             onSelect={selectCard}
+                            onDeleteTable={handleDeleteTable}
                         />
                     ) : null
                 ))}
             </Box>
-            {/* Add Table Dialog */}
-            <Dialog open={addDialogOpen} onClose={() => setAddDialogOpen(false)} maxWidth="sm" fullWidth>
-                <DialogTitle>Add New Table</DialogTitle>
-                <DialogContent>
-                    <TextField
-                        autoFocus
-                        margin="dense"
-                        label="Table Name"
-                        fullWidth
-                        variant="outlined"
-                        value={newTableName}
-                        onChange={e => setNewTableName(e.target.value)}
-                        error={newTableName.trim() !== '' && isTableNameTaken(newTableName.trim())}
-                        helperText={
-                            newTableName.trim() !== '' && isTableNameTaken(newTableName.trim())
-                                ? "A table with this name already exists"
-                                : "Enter a unique table name"
-                        }
-                        sx={{ mb: 2 }}
-                    />
-                    <TextField
-                        select
-                        label="Table Type"
-                        value={newTableType}
-                        onChange={e => setNewTableType(e.target.value)}
-                        fullWidth
-                        sx={{ mb: 2 }}
-                    >
-                        <MenuItem value="Manual">Manual</MenuItem>
-                        <MenuItem value="Google Spreadsheet" disabled>Google Spreadsheet (coming soon)</MenuItem>
-                    </TextField>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setAddDialogOpen(false)}>Cancel</Button>
-                    <Button
-                        onClick={() => {
-                            if (!newTableName.trim() || isTableNameTaken(newTableName.trim())) return;
-                            addTable();
-                            setAddDialogOpen(false);
-                            setNewTableName('');
-                            setNewTableType('Manual');
-                        }}
-                        variant="contained"
-                        disabled={!newTableName.trim() || isTableNameTaken(newTableName.trim())}
-                    >
-                        Add Table
-                    </Button>
-                </DialogActions>
-            </Dialog>
         </>
     );
 };

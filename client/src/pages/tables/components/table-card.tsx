@@ -1,9 +1,9 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { Box, Card, CardContent, CardHeader, IconButton, Typography } from '@mui/material';
-import { DragIndicator } from '@mui/icons-material';
+import { Box, Card, CardContent, CardHeader, IconButton, Typography, Dialog, DialogTitle, DialogContent, DialogActions, Button } from '@mui/material';
+import { DragIndicator, Delete as DeleteIcon } from '@mui/icons-material';
 import { useDrag } from 'react-dnd';
 import { ResizableBox } from 'react-resizable';
-import { TableCardData } from './table-card-grid';
+import type { TableCardData } from './table-card-grid';
 import 'react-resizable/css/styles.css';
 import ManualTable from './manual-table';
 
@@ -15,6 +15,7 @@ interface TableCardProps {
     onResizePreview: (id: string, width: number, height: number) => void;
     onResizeEnd: () => void;
     onSelect: (id: string) => void;
+    onDeleteTable: (tableId: string) => void;
 }
 
 const TableCard: React.FC<TableCardProps> = ({ 
@@ -23,8 +24,11 @@ const TableCard: React.FC<TableCardProps> = ({
     onResize,
     onResizePreview,
     onResizeEnd,
-    onSelect
+    onSelect,
+    onDeleteTable
 }) => {
+    // Dialog state for delete confirmation
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const dragRef = useRef<HTMLButtonElement>(null);
     const previewRef = useRef<HTMLDivElement>(null);
 
@@ -125,17 +129,29 @@ const TableCard: React.FC<TableCardProps> = ({
                             </Typography>
                         }
                         action={
-                            <IconButton
-                                ref={dragRef}
-                                size="small"
-                                sx={{ 
-                                    cursor: 'grab',
-                                    '&:active': { cursor: 'grabbing' }
-                                }}
-                                aria-label="drag"
-                            >
-                                <DragIndicator />
-                            </IconButton>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <IconButton
+                                    ref={dragRef}
+                                    size="small"
+                                    sx={{ 
+                                        cursor: 'grab',
+                                        '&:active': { cursor: 'grabbing' }
+                                    }}
+                                    aria-label="drag"
+                                >
+                                    <DragIndicator />
+                                </IconButton>
+                                <IconButton
+                                    size="small"
+                                    aria-label="delete table"
+                                    onClick={e => {
+                                        e.stopPropagation();
+                                        setDeleteDialogOpen(true);
+                                    }}
+                                >
+                                    <DeleteIcon />
+                                </IconButton>
+                            </Box>
                         }
                         sx={{ 
                             pb: 1,
@@ -156,6 +172,23 @@ const TableCard: React.FC<TableCardProps> = ({
                         )}
                     </CardContent>
                 </Card>
+                {/* Delete confirmation dialog */}
+                <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+                    <DialogTitle>Delete Table</DialogTitle>
+                    <DialogContent>
+                        <Typography>Are you sure you want to delete the table "{card.title}"?</Typography>
+                        <Typography variant="body2" color="error" sx={{ mt: 1 }}>
+                            This action cannot be undone and will delete all data in this table.
+                        </Typography>
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+                        <Button color="error" variant="contained" onClick={() => {
+                            setDeleteDialogOpen(false);
+                            onDeleteTable(card.id);
+                        }}>Delete</Button>
+                    </DialogActions>
+                </Dialog>
             </ResizableBox>
         </Box>
     );

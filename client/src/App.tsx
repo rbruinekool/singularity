@@ -68,10 +68,8 @@ const RootRoute = createRootRoute({
       return synchronizer;
     });
 
-    //store.delTable('0');
-    //store.delTable('1');
-    //store.delTable('2');
-    //store.delTable('DataTables');
+    // store.delTable('_Casters_');
+    // store.delTable('DataTables');
     return (
       <Provider store={store}>
         <ThemeProvider theme={theme}>

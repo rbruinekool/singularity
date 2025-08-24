@@ -398,7 +398,7 @@ const Rundown: React.FC<RundownProps> = ({ rundownId = 'rundown-1', selectedRowI
                         renderInput={(params) => (
                             <TextField {...params} label="Select Subcomposition" variant="outlined" size="small" />
                         )}
-                        onChange={(event, value) => {
+                        onChange={(_, value) => {
                             if (value) {
                                 setSelectedSubcomposition(value);
                                 handleAddRow(value);
