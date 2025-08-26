@@ -1,8 +1,8 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { Box } from '@mui/material';
 import { useDrop } from 'react-dnd';
-import TableCard from './table-card';
 import { useStore, useRowIds } from 'tinybase/ui-react';
+import TableCard from './components/table-card';
 
 export interface TableCardData {
     id: string;
@@ -407,7 +407,7 @@ const TableCardGrid: React.FC<TableCardGridProps> = ({ searchFilter }) => {
                     />
                 )}
                 {filteredCards.map((card) => (
-                    card.type === 'Manual' ? (
+                    card.type === 'Manual' || card.type === 'Google Spreadsheet' ? (
                         <TableCard
                             key={card.id}
                             card={card}

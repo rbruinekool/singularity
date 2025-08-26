@@ -68,7 +68,7 @@ const RootRoute = createRootRoute({
       return synchronizer;
     });
 
-    // store.delTable('_Casters_');
+    //store.delTable('$Players$');
     // store.delTable('DataTables');
     return (
       <Provider store={store}>

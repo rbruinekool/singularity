@@ -1,11 +1,16 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { Box, Card, CardContent, CardHeader, IconButton, Typography, Dialog, DialogTitle, DialogContent, DialogActions, Button } from '@mui/material';
-import { DragIndicator, Delete as DeleteIcon } from '@mui/icons-material';
+import { Box, Card, CardContent, CardHeader, IconButton, Typography, Dialog, DialogTitle, DialogContent, DialogActions, Button, Tooltip } from '@mui/material';
+import { DragIndicator, Autorenew, Delete as DeleteIcon } from '@mui/icons-material';
 import { useDrag } from 'react-dnd';
 import { ResizableBox } from 'react-resizable';
-import type { TableCardData } from './table-card-grid';
+import type { TableCardData } from '../table-card-grid';
 import 'react-resizable/css/styles.css';
 import ManualTable from './manual-table';
+import SpreadsheetTable from './spreadsheet-table';
+import ManualTableIcon from '../assets/ManualTableIcon';
+import SpreadsheetTableIcon from '../assets/spreadsheet-table-icon';
+import fetchTableFromSheet from '../api/fetch-table';
+import { useCell, useStore } from 'tinybase/ui-react';
 
 interface TableCardProps {
     card: TableCardData;
@@ -18,8 +23,8 @@ interface TableCardProps {
     onDeleteTable: (tableId: string) => void;
 }
 
-const TableCard: React.FC<TableCardProps> = ({ 
-    card, 
+const TableCard: React.FC<TableCardProps> = ({
+    card,
     isSelected,
     onResize,
     onResizePreview,
@@ -29,20 +34,22 @@ const TableCard: React.FC<TableCardProps> = ({
 }) => {
     // Dialog state for delete confirmation
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [isRefreshing, setIsRefreshing] = useState(false);
     const dragRef = useRef<HTMLButtonElement>(null);
     const previewRef = useRef<HTMLDivElement>(null);
+    const store = useStore();
 
     // Calculate maximum width based on screen size and container padding
     // Tables page has p: 3 (24px), TableCardGrid has p: 2 (16px) = 40px total padding per side
     const [maxWidth, setMaxWidth] = useState(800);
-    
+
     useEffect(() => {
         const calculateMaxWidth = () => {
             const totalPadding = 40 * 2; // 40px per side (Tables page + grid padding)
             const availableWidth = window.innerWidth - totalPadding;
             setMaxWidth(Math.max(200, availableWidth)); // Ensure at least minimum width
         };
-        
+
         calculateMaxWidth();
         window.addEventListener('resize', calculateMaxWidth);
         return () => window.removeEventListener('resize', calculateMaxWidth);
@@ -50,7 +57,7 @@ const TableCard: React.FC<TableCardProps> = ({
 
     const [{ isDragging }, drag, dragPreview] = useDrag({
         type: 'table-card',
-        item: { 
+        item: {
             id: card.id,
             left: card.x,
             top: card.y,
@@ -79,6 +86,46 @@ const TableCard: React.FC<TableCardProps> = ({
         // Show snap guides during resize
         onResizePreview(card.id, size.width, size.height);
     };
+
+    // Function to refresh spreadsheet table data
+    const refreshSpreadsheetTable = async () => {
+        // Prevent multiple refresh operations at the same time
+        if (isRefreshing || !store || card.type !== 'Google Spreadsheet') return;
+        
+        try {
+            setIsRefreshing(true);
+            
+            // Get the spreadsheet URL and sheet name from the DataTables row
+            const webAppUrl = store.getCell('DataTables', card.id, 'webAppUrl') as string;
+            const sheetName = store.getCell('DataTables', card.id, 'sheetName') as string;
+            
+            if (!webAppUrl || !sheetName) {
+                console.error('Missing spreadsheet URL or sheet name');
+                return;
+            }
+            
+            // Fetch the updated table data
+            const tableData = await fetchTableFromSheet(webAppUrl, sheetName);
+            
+            if (tableData) {
+                // Get the table name from DataTables
+                const tableName = store.getCell('DataTables', card.id, 'name') as string;
+                const tinybaseTableId = `$${tableName}$`;
+                
+                // Update the table with new data
+                store.setTable(tinybaseTableId, tableData);
+                
+                // Update the 'updated' timestamp
+                store.setCell('DataTables', card.id, 'updated', Date.now());
+            }
+        } catch (error) {
+            console.error('Error refreshing spreadsheet table:', error);
+        } finally {
+            setIsRefreshing(false);
+        }
+    };
+
+
 
     return (
         <Box
@@ -124,16 +171,68 @@ const TableCard: React.FC<TableCardProps> = ({
                 >
                     <CardHeader
                         title={
-                            <Typography variant="h6" component="div">
-                                {card.title}
-                            </Typography>
+                            <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 1 }}>
+                                <Typography variant="h6" component="div">
+                                    {card.title}
+                                </Typography>
+                                {card.type === 'Manual' ? (
+                                    <ManualTableIcon size={20} />
+                                ) : card.type === 'Google Spreadsheet' ? (
+                                    <Tooltip title="Open Spreadsheet" arrow>
+                                        <span>
+                                            <IconButton
+                                                size="small"
+                                                aria-label="open spreadsheet"
+                                                onClick={e => {
+                                                    e.stopPropagation();
+                                                    const ssUrl = store?.getCell('DataTables', card.id, 'ssUrl');
+                                                    if (ssUrl) {
+                                                        window.open(ssUrl as string, '_blank', 'noopener,noreferrer');
+                                                    }
+                                                }}
+                                            >
+                                                <SpreadsheetTableIcon />
+                                            </IconButton>
+                                        </span>
+                                    </Tooltip>
+                                ) : null}
+                            </Box>
                         }
                         action={
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                {card.type === 'Google Spreadsheet' && (
+                                    <Tooltip title="Fetch Table" arrow>
+                                        <span>
+                                            <IconButton
+                                                size="small"
+                                                aria-label="renew sheet"
+                                                onClick={e => {
+                                                    e.stopPropagation();
+                                                    refreshSpreadsheetTable();
+                                                }}
+                                                disabled={isRefreshing}
+                                            >
+                                                <Autorenew
+                                                    sx={{
+                                                        animation: isRefreshing ? 'spin 1s linear infinite' : 'none',
+                                                        '@keyframes spin': {
+                                                            '0%': {
+                                                                transform: 'rotate(0deg)',
+                                                            },
+                                                            '100%': {
+                                                                transform: 'rotate(360deg)',
+                                                            },
+                                                        },
+                                                    }}
+                                                />
+                                            </IconButton>
+                                        </span>
+                                    </Tooltip>
+                                )}
                                 <IconButton
                                     ref={dragRef}
                                     size="small"
-                                    sx={{ 
+                                    sx={{
                                         cursor: 'grab',
                                         '&:active': { cursor: 'grabbing' }
                                     }}
@@ -153,7 +252,7 @@ const TableCard: React.FC<TableCardProps> = ({
                                 </IconButton>
                             </Box>
                         }
-                        sx={{ 
+                        sx={{
                             pb: 1,
                             '& .MuiCardHeader-action': {
                                 alignSelf: 'center',
@@ -164,6 +263,8 @@ const TableCard: React.FC<TableCardProps> = ({
                     <CardContent sx={{ pt: 0 }}>
                         {card.type === 'Manual' ? (
                             <ManualTable tableId={card.id} />
+                        ) : card.type === 'Google Spreadsheet' ? (
+                            <SpreadsheetTable tableId={card.id} />
                         ) : (
                             <Typography variant="body2" color="text.secondary">
                                 Table content will go here. This is a placeholder for the actual table data

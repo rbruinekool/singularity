@@ -10,7 +10,7 @@ while true; do
     echo "$(date): Starting server..."
     
     # Start the server with increased memory and enable gc
-    LOG_LEVEL=warn node --max-old-space-size=2048 --expose-gc index.ts
+    LOG_LEVEL=warn node --max-old-space-size=1024 --expose-gc index.ts
     
     exit_code=$?
     echo "$(date): Server exited with code $exit_code"

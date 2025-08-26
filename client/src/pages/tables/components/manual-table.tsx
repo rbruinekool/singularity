@@ -55,13 +55,11 @@ const ManualTable: React.FC<ManualTableProps> = ({ tableId }) => {
     // Drag and drop state
     const draggedRowIdRef = useRef<string | null>(null);
     const [dragOverRowId, setDragOverRowId] = useState<string | null>(null);
-    const [isDragging, setIsDragging] = useState(false);
 
     // Reset drag state when dragging is canceled or completed
     const resetDragState = useCallback(() => {
         draggedRowIdRef.current = null;
         setDragOverRowId(null);
-        setIsDragging(false);
     }, []);
 
     // Add event listener for dragend
@@ -104,7 +102,6 @@ const ManualTable: React.FC<ManualTableProps> = ({ tableId }) => {
     const resizingCol = useRef<string | null>(null);
     const startX = useRef<number>(0);
     const startWidth = useRef<number>(0);
-    const [isResizing, setIsResizing] = useState(false);
 
     // Initialize the table structure if needed
     useEffect(() => {
@@ -307,7 +304,6 @@ const ManualTable: React.FC<ManualTableProps> = ({ tableId }) => {
     const handleDragStart = (e: React.DragEvent, rowId: string) => {
         e.stopPropagation();
         draggedRowIdRef.current = rowId;
-        setIsDragging(true);
 
         // Set drag effect and data transfer
         if (e.dataTransfer) {
@@ -388,7 +384,6 @@ const ManualTable: React.FC<ManualTableProps> = ({ tableId }) => {
         resizingCol.current = colKey;
         startX.current = e.clientX;
         startWidth.current = columnWidths[colKey] || 120;
-        setIsResizing(true);
 
         document.addEventListener('mousemove', handleColumnResizeMove);
         document.addEventListener('mouseup', handleColumnResizeEnd);
@@ -413,7 +408,6 @@ const ManualTable: React.FC<ManualTableProps> = ({ tableId }) => {
 
     const handleColumnResizeEnd = () => {
         resizingCol.current = null;
-        setIsResizing(false);
         document.removeEventListener('mousemove', handleColumnResizeMove);
         document.removeEventListener('mouseup', handleColumnResizeEnd);
     };
@@ -467,9 +461,9 @@ const ManualTable: React.FC<ManualTableProps> = ({ tableId }) => {
                         variant="outlined"
                         color="primary"
                         disabled={headerKeys.length === 0}
-                        sx={{ fontSize: '0.6rem' }}
+                        sx={{ fontSize: '0.5rem' }}
                     >
-                        Add Row
+                        Row
                     </Button>
                     <Button
                         size="small"
@@ -477,9 +471,9 @@ const ManualTable: React.FC<ManualTableProps> = ({ tableId }) => {
                         onClick={handleAddColClick}
                         variant="outlined"
                         color="primary"
-                        sx={{ fontSize: '0.6rem' }}
+                        sx={{ fontSize: '0.5rem' }}
                     >
-                        Add Column
+                        Column
                     </Button>
                 </Box>
                 {/* Search filter */}
@@ -538,7 +532,8 @@ const ManualTable: React.FC<ManualTableProps> = ({ tableId }) => {
                                         backgroundColor: theme.palette.background.paper,
                                         padding: '2px',
                                         textAlign: 'center',
-                                        height: '28px'
+                                        height: '28px',
+                                        borderRight: '1px solid rgba(200,200,200,0.1)'
                                     }}
                                 >
                                 </TableCell>
@@ -711,7 +706,7 @@ const ManualTable: React.FC<ManualTableProps> = ({ tableId }) => {
                                             key={colKey}
                                             sx={{
                                                 padding: '1px 2px',
-                                                borderRight: '1px solid rgba(200,200,200,0.05)',
+                                                borderLeft: '1px solid rgba(200,200,200,0.05)',
                                                 borderBottom: '1px solid rgba(109, 107, 107, 1)',
                                                 minHeight: '20px',
                                                 height: '20px',
