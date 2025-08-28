@@ -21,12 +21,12 @@ const SingularInfoDialog: React.FC<SingularInfoDialogProps> = ({ rowId, onClose 
     const updatedAt = useCell(tableId, rowId, 'updatedAt') as number;
     const modelText = useCell(tableId, rowId, 'model') as string;
     const model: SingularModel | null = modelText ? JSON.parse(modelText) : null;
+    const outputUrl = useCell(tableId, rowId, 'outputUrl') as string;
+    const publicControlUrl = useCell(tableId, rowId, 'publicControlUrl') as string;
+    const publicControlApiUrl = useCell(tableId, rowId, 'publicControlApiUrl') as string;
+    const publicModelApiUrl = useCell(tableId, rowId, 'publicModelApiUrl') as string;
 
     const singularName = model ? model.name : '';
-    const outputUrl = appToken ? `https://app.singular.live/output/${appToken}/Output?aspect=16:9` : '';
-    const appUrl = appToken ? `https://app.singular.live/control/${appToken}` : '';
-    const apiUrl = appToken ? `https://app.singular.live/apiv2/controlapps/${appToken}/control` : '';
-    const modelUrl = appToken ? `https://app.singular.live/apiv2/controlapps/${appToken}/model` : '';
 
     // Handle copy to clipboard
     const handleCopyUrl = async (url: string, urlType: string) => {
@@ -136,12 +136,12 @@ const SingularInfoDialog: React.FC<SingularInfoDialogProps> = ({ rowId, onClose 
                     </Typography>
                     <Box sx={{ ml: 2, flex: 1, display: 'flex', alignItems: 'center' }}>
                         <Typography variant="body2" sx={{ flex: 1, wordBreak: 'break-all' }}>
-                            {appUrl || 'No app token'}
+                            {publicControlUrl || 'No app token'}
                         </Typography>
-                        {appUrl && (
+                        {publicControlUrl && (
                             <IconButton
                                 size="small"
-                                onClick={() => handleCopyUrl(appUrl, 'App')}
+                                onClick={() => handleCopyUrl(publicControlUrl, 'App')}
                                 sx={{ ml: 1 }}
                                 aria-label="copy app URL"
                             >
@@ -157,12 +157,12 @@ const SingularInfoDialog: React.FC<SingularInfoDialogProps> = ({ rowId, onClose 
                     </Typography>
                     <Box sx={{ ml: 2, flex: 1, display: 'flex', alignItems: 'center' }}>
                         <Typography variant="body2" sx={{ flex: 1, wordBreak: 'break-all' }}>
-                            {apiUrl || 'No app token'}
+                            {publicControlApiUrl || 'No app token'}
                         </Typography>
-                        {apiUrl && (
+                        {publicControlApiUrl && (
                             <IconButton
                                 size="small"
-                                onClick={() => handleCopyUrl(apiUrl, 'API')}
+                                onClick={() => handleCopyUrl(publicControlApiUrl, 'API')}
                                 sx={{ ml: 1 }}
                                 aria-label="copy API URL"
                             >
@@ -178,12 +178,12 @@ const SingularInfoDialog: React.FC<SingularInfoDialogProps> = ({ rowId, onClose 
                     </Typography>
                     <Box sx={{ ml: 2, flex: 1, display: 'flex', alignItems: 'center' }}>
                         <Typography variant="body2" sx={{ flex: 1, wordBreak: 'break-all' }}>
-                            {modelUrl || 'No app token'}
+                            {publicModelApiUrl || 'No app token'}
                         </Typography>
-                        {modelUrl && (
+                        {publicModelApiUrl && (
                             <IconButton
                                 size="small"
-                                onClick={() => handleCopyUrl(modelUrl, 'Model')}
+                                onClick={() => handleCopyUrl(publicModelApiUrl, 'Model')}
                                 sx={{ ml: 1 }}
                                 aria-label="copy model URL"
                             >

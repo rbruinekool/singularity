@@ -227,7 +227,7 @@ const Tables: React.FC = () => {
                         value={newTableType}
                         onChange={e => setNewTableType(e.target.value)}
                         fullWidth
-                        sx={{ mt: 2, mb:1 }}
+                        sx={{ mt: 2, mb: 1 }}
                     >
                         <MenuItem value="Manual">Manual</MenuItem>
                         <MenuItem value="Google Spreadsheet">Google Spreadsheet</MenuItem>

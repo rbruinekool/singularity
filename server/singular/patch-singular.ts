@@ -29,10 +29,10 @@ export const PatchSingular = async (
 
     // Check for required properties
     if (!row.subCompositionId || !row.appToken) {
-        logger.error({ 
-            componentName, 
-            tableId, 
-            row 
+        logger.error({
+            componentName,
+            tableId,
+            row
         }, 'Component missing required subCompositionId or appToken');
         return;
     }
@@ -47,8 +47,8 @@ export const PatchSingular = async (
             try {
                 payload = JSON.parse(row.payload);
             } catch (parseError) {
-                logger.warn({ 
-                    componentName, 
+                logger.warn({
+                    componentName,
                     tableId,
                     rowId,
                     payload: row.payload,
@@ -62,6 +62,17 @@ export const PatchSingular = async (
         }
     }
 
+    //Detect 'Start on Play' values for timers in the payload
+    for (const [key, value] of Object.entries(payload)) {
+        if (typeof value === 'string' && value.includes('::add-')) {
+            const match = value.match(/::add-(\d+)/);
+            if (match) {
+                const addMs = parseInt(match[1], 10);
+                (payload as any)[key] = Date.now() + addMs;
+            }
+        }
+    }
+
     // Build request body
     const requestBody: any = {
         subCompositionId: subCompId,
@@ -71,8 +82,8 @@ export const PatchSingular = async (
     // Add animation state if provided
     if (animateTo) {
         requestBody.state = animateTo;
-        logger.info({ 
-            componentName, 
+        logger.info({
+            componentName,
             tableId,
             rowId,
             subCompId,
@@ -80,8 +91,8 @@ export const PatchSingular = async (
             hasPayload: Object.keys(payload).length > 0
         }, 'Patching Singular with animation state');
     } else {
-        logger.info({ 
-            componentName, 
+        logger.info({
+            componentName,
             tableId,
             rowId,
             subCompId,
@@ -110,26 +121,26 @@ export const PatchSingular = async (
         }
 
         const data = await response.json();
-        logger.debug({ 
-            componentName, 
+        logger.debug({
+            componentName,
             tableId,
             rowId,
-            subCompId, 
+            subCompId,
             animateTo,
-            response: data 
+            response: data
         }, 'Singular Response to Patch request');
 
     } catch (error: any) {
         clearTimeout(timeoutId);
         if (error.name !== 'AbortError') {
-            logger.error({ 
-                error: error.message, 
-                componentName, 
+            logger.error({
+                error: error.message,
+                componentName,
                 tableId,
                 rowId,
-                subCompId, 
+                subCompId,
                 appToken: appToken.substring(0, 8) + '...',
-                animateTo 
+                animateTo
             }, 'Failed to send control command to Singular Live');
         }
     }

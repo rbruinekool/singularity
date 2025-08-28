@@ -1,12 +1,12 @@
-import { SingularModel } from "./singular/interfaces/singular-model";
+import { SingularModel } from "./interfaces/singular-model";
 
-export const fetchModel = async (appToken: string): Promise<SingularModel > => {
+export const fetchModel = async (appToken: string): Promise<SingularModel> => {
     const response = await fetch(`https://app.singular.live/apiv2/controlapps/${appToken}/model`);
     if (!response.ok) {
         throw new Error('Network response was not ok');
     }
     const data = await response.json();
-    if(!data || !data[0].subcompositions || !data[0].id){
+    if (!data || !data[0].subcompositions || !data[0].id) {
         throw new Error('Invalid singular model data received');
     }
 
