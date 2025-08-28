@@ -175,35 +175,6 @@ const TimeControl: React.FC<TimeControlProps> = ({ model, rowId }) => {
         setStartOnPlayInput(''); // Clear the input after successful submission
     };
 
-    // Generate hour options for quick selection
-    const generateQuickHours = () => {
-        const now = new Date();
-        const options: React.ReactElement[] = [];
-        
-        for (let i = 1; i <= 12; i++) {
-            const futureTime = new Date(now.getTime() + (i * 60 * 60 * 1000));
-            const hours = futureTime.getHours().toString().padStart(2, '0');
-            const minutes = futureTime.getMinutes().toString().padStart(2, '0');
-            const timeStr = `${hours}:${minutes}`;
-            
-            options.push(
-                <Button
-                    key={i}
-                    size="small"
-                    variant="outlined"
-                    onClick={() => {
-                        setCountdownTimeInput(timeStr);
-                        setInputError('');
-                    }}
-                    sx={{ mr: 0.5, mb: 0.5 }}
-                >
-                    +{i}h
-                </Button>
-            );
-        }
-        return options;
-    };
-
     // Generate minute duration options for manual mode
     const generateQuickMinutes = () => {
         const durations = [1, 2, 5, 7, 10, 15, 20, 30, 45, 60];

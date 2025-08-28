@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Box, Typography, Paper, Divider, TextField, Grid, IconButton, Collapse } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import { useCell, useRow, useSetCellCallback, useStore, useTable } from 'tinybase/ui-react';
+import { useCell, useRow, useSetCellCallback, useTable } from 'tinybase/ui-react';
 import { getPayloadModel } from '../../../../shared/singular/getPayloadModel';
 import { SingularModel, Model } from '../../../../shared/singular/interfaces/singular-model';
 import TextControl from './singular-controls/text-control';

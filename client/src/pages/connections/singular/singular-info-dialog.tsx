@@ -14,7 +14,6 @@ const SingularInfoDialog: React.FC<SingularInfoDialogProps> = ({ rowId, onClose 
 
     // State for copy feedback
     const [copySnackbarOpen, setCopySnackbarOpen] = useState(false);
-    const [copiedUrlType, setCopiedUrlType] = useState<string>('');
 
     // Get connection data from TinyBase
     const label = useCell(tableId, rowId, 'label') as string;
@@ -34,7 +33,6 @@ const SingularInfoDialog: React.FC<SingularInfoDialogProps> = ({ rowId, onClose 
         if (url) {
             try {
                 await navigator.clipboard.writeText(url);
-                setCopiedUrlType(urlType);
                 setCopySnackbarOpen(true);
             } catch (err) {
                 console.error(`Failed to copy ${urlType} URL:`, err);
@@ -46,7 +44,6 @@ const SingularInfoDialog: React.FC<SingularInfoDialogProps> = ({ rowId, onClose 
                 textArea.select();
                 try {
                     document.execCommand('copy');
-                    setCopiedUrlType(urlType);
                     setCopySnackbarOpen(true);
                 } catch (fallbackErr) {
                     console.error(`Fallback copy failed for ${urlType}:`, fallbackErr);

@@ -5,11 +5,6 @@ import Rundown from './rundown/rundown';
 import SingularControlPanel from './controls/singular/singular-control-panel';
 import RundownTabs from './components/rundown-tabs';
 
-interface SelectedRowData {
-    rowId: string;
-    data: Record<string, any>;
-}
-
 const Main: React.FC = () => {
     const [dividerPosition, setDividerPosition] = useState(() => {
         const saved = localStorage.getItem('dividerPosition');

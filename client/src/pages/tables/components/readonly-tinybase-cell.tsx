@@ -1,7 +1,6 @@
 import React from 'react';
 import { useCell, useStore } from 'tinybase/ui-react';
 import { Box, Typography } from '@mui/material';
-import { useTheme } from '@mui/material/styles';
 
 interface ReadOnlyTinyBaseCellProps {
     tableId: string;
@@ -26,7 +25,6 @@ const ReadOnlyTinyBaseCell: React.FC<ReadOnlyTinyBaseCellProps> = ({ tableId, ro
                 minHeight: '18px',
                 display: 'flex',
                 alignItems: 'center',
-                padding: 0.5
             }}
         >
             <Typography 

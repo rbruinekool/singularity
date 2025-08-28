@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { TableRow, TableCell, IconButton, Tooltip } from '@mui/material';
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Divider, Typography } from '@mui/material';
 import { Autorenew, InfoOutlined } from '@mui/icons-material';
-import { CellView, useDelRowCallback, useCell, useSetCellCallback, useStore } from 'tinybase/ui-react';
+import { CellView, useDelRowCallback, useCell, useSetCellCallback } from 'tinybase/ui-react';
 import { fetchModel } from '../../../shared/fetchModel';
 import SingularInfoDialog from './singular-info-dialog';
 

@@ -10,7 +10,7 @@ import SpreadsheetTable from './spreadsheet-table';
 import ManualTableIcon from '../assets/ManualTableIcon';
 import SpreadsheetTableIcon from '../assets/spreadsheet-table-icon';
 import fetchTableFromSheet from '../api/fetch-table';
-import { useCell, useStore } from 'tinybase/ui-react';
+import { useStore } from 'tinybase/ui-react';
 
 interface TableCardProps {
     card: TableCardData;

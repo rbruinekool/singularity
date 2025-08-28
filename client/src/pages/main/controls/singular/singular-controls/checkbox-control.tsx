@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Box, Typography, FormControlLabel, Checkbox, Grid } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { Model } from '../../../../../shared/singular/interfaces/singular-model';

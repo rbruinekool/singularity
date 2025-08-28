@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useTable, useStore } from 'tinybase/ui-react';
 import { 
     Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, 
@@ -6,6 +6,7 @@ import {
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import { useTheme } from '@mui/material/styles';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import ReadOnlyTinyBaseCell from './readonly-tinybase-cell';
 
 interface SpreadsheetTableProps {
@@ -16,9 +17,31 @@ const SpreadsheetTable: React.FC<SpreadsheetTableProps> = ({ tableId }) => {
     // Snackbar state for copy feedback
     const [copySnackbarOpen, setCopySnackbarOpen] = useState(false);
     const [copiedCellValue, setCopiedCellValue] = useState<string>('');
+    const tableContainerRef = useRef<HTMLDivElement>(null);
+    
+    // State to track container dimensions
+    const [containerHeight, setContainerHeight] = useState(300); // Default height
+    
+    // Setup resize observer to update container height when parent card resizes
+    useEffect(() => {
+        const container = tableContainerRef.current;
+        if (!container) return;
+        
+        const resizeObserver = new ResizeObserver(entries => {
+            for (const entry of entries) {
+                setContainerHeight(entry.contentRect.height);
+            }
+        });
+        
+        resizeObserver.observe(container);
+        
+        return () => {
+            resizeObserver.disconnect();
+        };
+    }, []);
 
     // Copy to clipboard logic (from singular-info-dialog.tsx)
-    const handleCopyCell = async (value: string) => {
+    const handleCopyCell = useCallback(async (value: string) => {
         if (value !== undefined && value !== null) {
             try {
                 await navigator.clipboard.writeText(value);
@@ -41,7 +64,7 @@ const SpreadsheetTable: React.FC<SpreadsheetTableProps> = ({ tableId }) => {
                 document.body.removeChild(textArea);
             }
         }
-    };
+    }, []);
     const theme = useTheme();
     const store = useStore();
     
@@ -74,6 +97,75 @@ const SpreadsheetTable: React.FC<SpreadsheetTableProps> = ({ tableId }) => {
     // Check if the table is empty (no headers and no data)
     const isTableEmpty = headerKeys.length === 0 && dataRowIds.length === 0;
 
+    // Create virtualizer for the table rows
+    const rowVirtualizer = useVirtualizer({
+        count: dataRowIds.length,
+        getScrollElement: () => tableContainerRef.current,
+        estimateSize: () => 20, // Row height in pixels
+        overscan: 5, // Number of items to render before/after the visible area
+        getItemKey: (index) => dataRowIds[index] || index,
+    });
+
+    // Handle cell width calculations for column layout
+    const columnCount = headerKeys.length;
+    const columnWidth = columnCount > 0 ? `${100 / columnCount}%` : '100%';
+    
+    // Memoize row rendering for performance
+    const renderVirtualRow = useCallback((virtualRow: any) => {
+        const rowId = dataRowIds[virtualRow.index];
+        return (
+            <div
+                key={rowId}
+                data-index={virtualRow.index}
+                data-row-id={rowId}
+                style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '20px',
+                    transform: `translateY(${virtualRow.start}px)`,
+                    display: 'flex',
+                }}
+                onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = theme.palette.action.hover;
+                }}
+                onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '';
+                }}
+            >
+                {headerKeys.map((colKey) => {
+                    const cellValue = table[rowId]?.[colKey] ?? '';
+                    return (
+                        <div
+                            key={`${rowId}-${colKey}`}
+                            style={{
+                                borderRight: '1px solid rgba(200,200,200,0.05)',
+                                borderBottom: '1px solid #6d6b6b',
+                                minHeight: '24px',
+                                height: '24px',
+                                minWidth: '120px',
+                                maxWidth: '240px',
+                                overflow: 'hidden',
+                                boxSizing: 'border-box',
+                                fontSize: '0.75rem',
+                                cursor: cellValue ? 'pointer' : 'default',
+                                width: columnWidth,
+                            }}
+                            onClick={() => cellValue && handleCopyCell(String(cellValue))}
+                        >
+                            <ReadOnlyTinyBaseCell
+                                tableId={internalTableId}
+                                rowId={rowId}
+                                colKey={colKey}
+                            />
+                        </div>
+                    );
+                })}
+            </div>
+        );
+    }, [headerKeys, table, internalTableId, handleCopyCell, theme.palette.action.hover, columnWidth, dataRowIds]);
+
     return (
         <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             {/* Search bar */}
@@ -99,26 +191,31 @@ const SpreadsheetTable: React.FC<SpreadsheetTableProps> = ({ tableId }) => {
                         }}
                     />
             </Box>
-            <TableContainer component={Box} sx={{
-                maxHeight: 400,
-                overflow: 'auto',
-                borderRadius: 1,
-                '& .MuiTable-root': {
-                    borderCollapse: 'separate',
-                    borderSpacing: 0
-                },
-                '&::-webkit-scrollbar': {
-                    width: '8px',
-                    height: '8px',
-                },
-                '&::-webkit-scrollbar-track': {
-                    backgroundColor: theme.palette.background.default,
-                },
-                '&::-webkit-scrollbar-thumb': {
-                    backgroundColor: theme.palette.divider,
-                    borderRadius: '4px',
-                },
-            }}>
+            <TableContainer 
+                component={Box} 
+                ref={tableContainerRef}
+                sx={{
+                    height: '100%',
+                    maxHeight: 400,
+                    overflow: 'auto',
+                    borderRadius: 1,
+                    '& .MuiTable-root': {
+                        borderCollapse: 'separate',
+                        borderSpacing: 0
+                    },
+                    '&::-webkit-scrollbar': {
+                        width: '8px',
+                        height: '8px',
+                    },
+                    '&::-webkit-scrollbar-track': {
+                        backgroundColor: theme.palette.background.default,
+                    },
+                    '&::-webkit-scrollbar-thumb': {
+                        backgroundColor: theme.palette.divider,
+                        borderRadius: '4px',
+                    },
+                }}
+            >
                 {isTableEmpty ? (
                     <Box sx={{ p: 3, textAlign: 'center', backgroundColor: theme.palette.background.paper }}>
                         <Typography variant="body1" color="text.secondary">
@@ -126,9 +223,9 @@ const SpreadsheetTable: React.FC<SpreadsheetTableProps> = ({ tableId }) => {
                         </Typography>
                     </Box>
                 ) : (
-                    <Table size="small" sx={{ tableLayout: 'fixed', width: 'max-content' }}>
+                    <Table size="small" sx={{ tableLayout: 'fixed', width: 'max-content', minWidth: '100%' }}>
                         <TableHead>
-                            <TableRow sx={{ backgroundColor: theme.palette.background.paper }}>
+                            <TableRow sx={{ backgroundColor: theme.palette.background.paper, position: 'sticky', top: 0, zIndex: 1 }}>
                                 {headerKeys.map((colKey) => (
                                     <TableCell
                                         key={colKey}
@@ -142,6 +239,7 @@ const SpreadsheetTable: React.FC<SpreadsheetTableProps> = ({ tableId }) => {
                                             height: '28px',
                                             boxSizing: 'border-box',
                                             fontSize: '0.75rem',
+                                            width: columnWidth,
                                         }}
                                     >
                                         <Typography variant="subtitle2" sx={{ fontWeight: 'bold', fontSize: '0.75rem' }}>
@@ -152,54 +250,14 @@ const SpreadsheetTable: React.FC<SpreadsheetTableProps> = ({ tableId }) => {
                             </TableRow>
                         </TableHead>
                         <TableBody sx={{ backgroundColor: theme.palette.background.default }}>
-                            {dataRowIds.map((rowId) => (
-                                <TableRow
-                                    key={rowId}
-                                    sx={{
-                                        minHeight: '20px',
-                                        height: '20px',
-                                        backgroundColor: 'inherit',
-                                        '&:hover': {
-                                            backgroundColor: theme.palette.action.hover
-                                        },
-                                        transition: 'background-color 0.2s',
-                                    }}
-                                >
-                                    {headerKeys.map((colKey) => {
-                                        const cellValue = table[rowId]?.[colKey] ?? '';
-                                        return (
-                                            <TableCell
-                                                key={`${rowId}-${colKey}`}
-                                                sx={{
-                                                    padding: '1px 2px',
-                                                    borderRight: '1px solid rgba(200,200,200,0.05)',
-                                                    borderBottom: '1px solid rgba(109, 107, 107, 1)',
-                                                    minHeight: '20px',
-                                                    height: '20px',
-                                                    minWidth: '120px',
-                                                    maxWidth: '240px',
-                                                    overflow: 'hidden',
-                                                    boxSizing: 'border-box',
-                                                    fontSize: '0.75rem',
-                                                    cursor: cellValue ? 'pointer' : 'default',
-                                                    transition: 'background-color 0.2s',
-                                                    '&:hover': cellValue ? {
-                                                        backgroundColor: theme.palette.action.selected,
-                                                    } : {},
-                                                }}
-                                                onClick={() => cellValue && handleCopyCell(String(cellValue))}
-                                                aria-label={cellValue ? `Copy cell value: ${cellValue}` : undefined}
-                                            >
-                                                <ReadOnlyTinyBaseCell
-                                                    tableId={internalTableId}
-                                                    rowId={rowId}
-                                                    colKey={colKey}
-                                                />
-                                            </TableCell>
-                                        );
-                                    })}
-                                </TableRow>
-                            ))}
+                            {/* Virtual table implementation */}
+                            <TableRow sx={{ height: `${rowVirtualizer.getTotalSize()}px`, display: 'block' }}>
+                                <TableCell sx={{ height: '100%', p: 0, border: 'none' }} colSpan={headerKeys.length}>
+                                    <div style={{ height: '100%', position: 'relative', width: '100%' }}>
+                                        {rowVirtualizer.getVirtualItems().map(renderVirtualRow)}
+                                    </div>
+                                </TableCell>
+                            </TableRow>
                         </TableBody>
                     </Table>
                 )}
