@@ -1,5 +1,8 @@
 import { createLogger } from "../utils/logger.ts";
 import type { RundownRow } from "../datastore/interfaces.ts";
+import { replaceCustomVariables } from "./variables.ts";
+import { type MergeableStore } from "tinybase/mergeable-store";
+
 
 const logger = createLogger('patch-singular');
 
@@ -13,7 +16,7 @@ type AnimationState = 'In' | 'Out1' | 'Out2';
  * @param animateTo - Optional animation state to transition to ('In', 'Out1', 'Out2')
  */
 export const PatchSingular = async (
-    store: any,
+    store: MergeableStore,
     tableId: string,
     rowId: string,
     animateTo?: AnimationState
@@ -62,14 +65,22 @@ export const PatchSingular = async (
         }
     }
 
-    //Detect 'Start on Play' values for timers in the payload
+    // Replace special patterns in the payload
     for (const [key, value] of Object.entries(payload)) {
-        if (typeof value === 'string' && value.includes('::add-')) {
+
+        // Detect 'Start on Play' values for timers in the payload with the pattern ::add-
+        // Only do this if we are animating In so as to not reset the timer on updates and stop
+        if (animateTo === 'In' && typeof value === 'string' && value.includes('::add-')) {
             const match = value.match(/::add-(\d+)/);
             if (match) {
                 const addMs = parseInt(match[1], 10);
                 (payload as any)[key] = Date.now() + addMs;
             }
+        }
+
+        //Detect variables with the pattern $(custom:)
+        if (typeof value === 'string' && value.includes('$(custom:')) {
+            (payload as any)[key] = replaceCustomVariables(store, value);
         }
     }
 

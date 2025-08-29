@@ -1,4 +1,4 @@
-import { createMergeableStore, type MergeableStore } from 'tinybase/mergeable-store';
+import { createMergeableStore } from 'tinybase/mergeable-store';
 import { createWsServer } from 'tinybase/synchronizers/synchronizer-ws-server';
 import { WebSocketServer } from 'ws';
 import { createFilePersister } from 'tinybase/persisters/persister-file';
@@ -27,7 +27,7 @@ const wsServer = createWsServer(
 
 //Animation change listener for Singular compositions
 store.addCellListener(
-  'rundown-1', 
+  'rundown-1',
   null,
   'state',
   async (store, tableId, rowId, cellId, newValue, oldValue, getCellChange) => {
@@ -54,7 +54,7 @@ store.addCellListener(
   null,
   'update',
   async (store, tableId, rowId, cellId, newValue, oldValue, getCellChange) => {
-        if (typeof newValue !== 'number') return;
+    if (typeof newValue !== 'number') return;
     if (typeof oldValue !== 'number') return;
     logger.debug({
       rowId,

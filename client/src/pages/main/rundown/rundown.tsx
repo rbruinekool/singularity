@@ -23,7 +23,7 @@ const Rundown: React.FC<RundownProps> = ({ rundownId = 'rundown-1', selectedRowI
     const [columnWidths, setColumnWidths] = useState(() => {
         const saved = localStorage.getItem('columnWidths');
         const defaultWidths = [30, 60, 60, 120, 120, 30];
-        
+
         if (saved) {
             try {
                 const parsedWidths = JSON.parse(saved);
@@ -53,7 +53,7 @@ const Rundown: React.FC<RundownProps> = ({ rundownId = 'rundown-1', selectedRowI
     const store = useStore();
     if (!store) return <p>No store available</p>;
 
-    // TinyBase hooks for efficient operations
+    // important: do not dynamically reference the table name, 'rundown-1' is for now always the main rundown table
     const rundownTableRowIds = useRowIds('rundown-1');
     const rundownTable = useTable('rundown-1');
 
@@ -143,7 +143,7 @@ const Rundown: React.FC<RundownProps> = ({ rundownId = 'rundown-1', selectedRowI
         (subComp: ExtendedSubcomposition) => {
             // Determine where to insert the new row
             let insertOrder = 0; // Default to top
-            
+
             if (selectedRowId) {
                 const selectedRowOrder = rundownTable?.[selectedRowId]?.order;
                 if (typeof selectedRowOrder === 'number') {
@@ -199,17 +199,17 @@ const Rundown: React.FC<RundownProps> = ({ rundownId = 'rundown-1', selectedRowI
             const leftCol = resizingCol.current;
             const rightCol = leftCol + 1;
             const minWidth = 40;
-            
+
             // Calculate new widths without clamping first
             let newLeftWidth = startWidths.current[leftCol] + deltaX;
             let newRightWidth = startWidths.current[rightCol] - deltaX;
-            
+
             // Check if either column would go below minimum width
             if (newLeftWidth < minWidth || newRightWidth < minWidth) {
                 // Stop the drag operation completely to prevent cascading effects
                 return;
             }
-            
+
             // Update the widths since both are above minimum
             const newWidths = [...startWidths.current];
             newWidths[leftCol] = newLeftWidth;
@@ -231,10 +231,10 @@ const Rundown: React.FC<RundownProps> = ({ rundownId = 'rundown-1', selectedRowI
         if (fromRowId === toRowId) return;
 
         // Get all rows for this rundown and sort by order
-        const rowIds = rundownTableRowIds.filter(rowId => 
+        const rowIds = rundownTableRowIds.filter(rowId =>
             rundownTable?.[rowId]?.rundownId === rundownId
         );
-        
+
         rowIds.sort((a, b) => {
             const orderA = rundownTable?.[a]?.order ?? 0;
             const orderB = rundownTable?.[b]?.order ?? 0;
@@ -274,7 +274,7 @@ const Rundown: React.FC<RundownProps> = ({ rundownId = 'rundown-1', selectedRowI
 
                 if (label && appToken && modelString) {
                     const model: SingularModel = JSON.parse(modelString);
-                    
+
                     model.subcompositions.forEach(subComp => {
                         options.push({
                             ...subComp,
@@ -298,9 +298,9 @@ const Rundown: React.FC<RundownProps> = ({ rundownId = 'rundown-1', selectedRowI
     return (
         <Box position="relative">
             <TableContainer component={Paper}>
-                <Table 
-                    size="small" 
-                    sx={{ 
+                <Table
+                    size="small"
+                    sx={{
                         tableLayout: 'fixed',
                         width: '100%'
                     }}
@@ -446,9 +446,9 @@ const Rundown: React.FC<RundownProps> = ({ rundownId = 'rundown-1', selectedRowI
                 <DialogTitle>Delete Rundown</DialogTitle>
                 <DialogContent>
                     <DialogContentText sx={{ fontSize: '0.875rem' }}>
-                            Are you sure you want to irreversibly delete the entire rundown?
-                            <span>This action cannot be undone and will</span>
-                        <span style={{ color: 'error.main'}}> irreversibly remove all items</span> from the rundown!
+                        Are you sure you want to irreversibly delete the entire rundown?
+                        <span>This action cannot be undone and will</span>
+                        <span style={{ color: 'error.main' }}> irreversibly remove all items</span> from the rundown!
                     </DialogContentText>
                 </DialogContent>
                 <DialogActions>

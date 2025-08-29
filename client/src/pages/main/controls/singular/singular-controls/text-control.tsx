@@ -3,6 +3,8 @@ import { Box, Typography, TextField, Grid } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { Model } from '../../../../../shared/singular/interfaces/singular-model';
 import { usePayloadValue, useSetPayloadValue } from '../hooks/usePayload';
+import { replaceCustomVariables } from './variables';
+import { useTable } from 'tinybase/ui-react';
 
 interface TextControlProps {
     model: Model;
@@ -14,11 +16,24 @@ const TextControl: React.FC<TextControlProps> = ({ model, rowId }) => {
     const theme = useTheme();
     const [isEditing, setIsEditing] = useState(false);
     const [editValue, setEditValue] = useState('');
+    const [vPreview, setVPreview] = useState('');
     const rundownId = 'rundown-1';
 
-    // Use the new payload hooks
+    //payload hooks
     const storeValue = usePayloadValue(rundownId, rowId, model.id, model.defaultValue || '');
     const setPayloadValue = useSetPayloadValue(rundownId, rowId, model.id);
+
+    const variables = useTable('variables');
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const inputString = e.target.value;
+        setEditValue(inputString);
+        if (inputString.match(/\$\(([^)]+)\)/g)) {
+            setVPreview(replaceCustomVariables(variables, inputString));
+        } else {
+            setVPreview('');
+        }
+    };
 
     // Get the current value from the store
     const handleClick = () => {
@@ -55,7 +70,7 @@ const TextControl: React.FC<TextControlProps> = ({ model, rowId }) => {
                 {isEditing ? (
                     <TextField
                         value={editValue}
-                        onChange={(e) => setEditValue(e.target.value)}
+                        onChange={handleChange}
                         onBlur={handleSubmit}
                         onKeyDown={handleKeyDown}
                         placeholder={model.defaultValue}
@@ -96,11 +111,18 @@ const TextControl: React.FC<TextControlProps> = ({ model, rowId }) => {
                         {String(storeValue) || model.defaultValue}
                     </Box>
                 )}
-                {model.source && (
+                {
+                    vPreview !== '' && (
+                        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                            {vPreview ? `${vPreview}` : ''}
+                        </Typography>
+                    )
+                }
+                {/* {model.source && (
                     <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
                         Source: {model.source}
                     </Typography>
-                )}
+                )} */}
             </Box>
         </Grid>
     );
