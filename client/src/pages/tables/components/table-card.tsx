@@ -91,30 +91,30 @@ const TableCard: React.FC<TableCardProps> = ({
     const refreshSpreadsheetTable = async () => {
         // Prevent multiple refresh operations at the same time
         if (isRefreshing || !store || card.type !== 'Google Spreadsheet') return;
-        
+
         try {
             setIsRefreshing(true);
-            
+
             // Get the spreadsheet URL and sheet name from the DataTables row
             const webAppUrl = store.getCell('DataTables', card.id, 'webAppUrl') as string;
             const sheetName = store.getCell('DataTables', card.id, 'sheetName') as string;
-            
+
             if (!webAppUrl || !sheetName) {
                 console.error('Missing spreadsheet URL or sheet name');
                 return;
             }
-            
+
             // Fetch the updated table data
             const tableData = await fetchTableFromSheet(webAppUrl, sheetName);
-            
+
             if (tableData) {
                 // Get the table name from DataTables
                 const tableName = store.getCell('DataTables', card.id, 'name') as string;
                 const tinybaseTableId = `$${tableName}$`;
-                
+
                 // Update the table with new data
                 store.setTable(tinybaseTableId, tableData);
-                
+
                 // Update the 'updated' timestamp
                 store.setCell('DataTables', card.id, 'updated', Date.now());
             }
@@ -135,7 +135,7 @@ const TableCard: React.FC<TableCardProps> = ({
                 position: 'absolute',
                 left: card.x,
                 top: card.y,
-                opacity: isDragging ? 0.5 : 1,
+                //opacity: isDragging ? 0.5 : 1,
                 cursor: isDragging ? 'grabbing' : 'pointer',
                 zIndex: isDragging ? 1000 : (isSelected ? 100 : 1),
                 margin: 0,

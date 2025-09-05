@@ -5,11 +5,12 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { useCell, useRow, useSetCellCallback, useTable } from 'tinybase/ui-react';
 import { getPayloadModel } from '../../../../shared/singular/getPayloadModel';
 import { SingularModel, Model } from '../../../../shared/singular/interfaces/singular-model';
-import TextControl from './singular-controls/text-control';
+//import TextControl from './singular-controls/text-control';
 import TextareaControl from './singular-controls/textarea-control';
 import TimeControl from './singular-controls/time-control';
-import SelectionControl from './singular-controls/selection-control';
+//import SelectionControl from './singular-controls/selection-control';
 import CheckboxControl from './singular-controls/checkbox-control';
+import CustomSelection from './generic/custom-selection';
 
 interface SingularControlPanelProps {
     rowId: string;
@@ -36,18 +37,18 @@ const SingularControlPanel: React.FC<SingularControlPanelProps> = ({ rowId }) =>
     const theme = useTheme();
     const [isEditingName, setIsEditingName] = useState(false);
     const [editNameValue, setEditNameValue] = useState('');
-    
+
     // Simple global collapsed state - shared across all components
     const [isCollapsed, setIsCollapsed] = useState(() => {
         const stored = localStorage.getItem('singularControlPanel_collapsed');
         return stored ? JSON.parse(stored) : false; // Default to expanded
     });
-    
+
     // Update localStorage when collapse state changes
     useEffect(() => {
         localStorage.setItem('singularControlPanel_collapsed', JSON.stringify(isCollapsed));
     }, [isCollapsed]);
-    
+
     const handleToggleCollapse = () => {
         setIsCollapsed(!isCollapsed);
     };
@@ -128,15 +129,22 @@ const SingularControlPanel: React.FC<SingularControlPanelProps> = ({ rowId }) =>
         switch (model.type) {
             case 'text':
                 return (
-                    <TextControl
-                        key={model.id}
+                    <CustomSelection
+                        key={`${rowId}_${model.id}`}
                         model={model}
-                        rowId={rowId} />
-                );
+                        rowId={rowId}
+                    />
+                )
+            // return (
+            //     <TextControl
+            //         key={model.id}
+            //         model={model}
+            //         rowId={rowId} />
+            // );
             case 'textarea':
                 return (
                     <TextareaControl
-                        key={model.id}
+                        key={`${rowId}_${model.id}`}
                         model={model}
                         rowId={rowId} />
                 );
@@ -149,15 +157,22 @@ const SingularControlPanel: React.FC<SingularControlPanelProps> = ({ rowId }) =>
                 );
             case 'selection':
                 return (
-                    <SelectionControl
-                        key={model.id}
+                    <CustomSelection
+                        key={`${rowId}_${model.id}`}
                         model={model}
-                        rowId={rowId} />
-                );
+                        rowId={rowId}
+                    />
+                )
+            // return (
+            //     <SelectionControl
+            //         key={model.id}
+            //         model={model}
+            //         rowId={rowId} />
+            // );
             case 'checkbox':
                 return (
                     <CheckboxControl
-                        key={model.id}
+                        key={`${rowId}_${model.id}`}
                         model={model}
                         rowId={rowId} />
                 );
@@ -237,7 +252,7 @@ const SingularControlPanel: React.FC<SingularControlPanelProps> = ({ rowId }) =>
                     <IconButton
                         onClick={handleToggleCollapse}
                         size="small"
-                        sx={{ 
+                        sx={{
                             transition: 'transform 0.2s',
                             transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)'
                         }}

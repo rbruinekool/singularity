@@ -48,7 +48,7 @@ const TableCardGrid: React.FC<TableCardGridProps> = ({ searchFilter }) => {
     }, [tableRowIds]);
     // Start with no cards
     const [cards, setCards] = useState<TableCardData[]>([]);
-    
+
     const [snapGuides, setSnapGuides] = useState<{ x?: number; y?: number }>({});
     const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
     const [containerWidth, setContainerWidth] = useState<number>(0);
@@ -61,13 +61,13 @@ const TableCardGrid: React.FC<TableCardGridProps> = ({ searchFilter }) => {
             const availableWidth = window.innerWidth - totalPadding;
             setContainerWidth(availableWidth);
         };
-        
+
         updateContainerWidth();
         window.addEventListener('resize', updateContainerWidth);
         return () => window.removeEventListener('resize', updateContainerWidth);
     }, []);
 
-    const filteredCards = cards.filter(card => 
+    const filteredCards = cards.filter(card =>
         card.title.toLowerCase().includes(searchFilter.toLowerCase())
     );
 
@@ -128,7 +128,7 @@ const TableCardGrid: React.FC<TableCardGridProps> = ({ searchFilter }) => {
                 store.setCell('DataTables', id, 'x', snappedX);
                 store.setCell('DataTables', id, 'y', snappedY);
             }
-            return prevCards.map(card => 
+            return prevCards.map(card =>
                 card.id === id ? { ...card, x: snappedX, y: snappedY } : card
             );
         });
@@ -184,7 +184,7 @@ const TableCardGrid: React.FC<TableCardGridProps> = ({ searchFilter }) => {
                 store.setCell('DataTables', id, 'width', snappedWidth);
                 store.setCell('DataTables', id, 'height', snappedHeight);
             }
-            return prevCards.map(card => 
+            return prevCards.map(card =>
                 card.id === id ? { ...card, width: snappedWidth, height: snappedHeight } : card
             );
         });
@@ -193,15 +193,15 @@ const TableCardGrid: React.FC<TableCardGridProps> = ({ searchFilter }) => {
     const previewResize = useCallback((id: string, width: number, height: number) => {
         const otherCards = cards.filter(card => card.id !== id);
         const currentCard = cards.find(card => card.id === id);
-        
+
         if (!currentCard) return;
-        
+
         // Calculate snap guides for resize preview
         const snapThreshold = 15;
         const snapGap = 8;
         let guideX: number | undefined;
         let guideY: number | undefined;
-        
+
         // Check for width snap guides
         for (const otherCard of otherCards) {
             // Right edge to left edge (with gap)
@@ -210,7 +210,7 @@ const TableCardGrid: React.FC<TableCardGridProps> = ({ searchFilter }) => {
                 guideX = currentCard.x + targetWidthWithGap;
                 break;
             }
-            
+
             // Right edge to right edge
             const otherCardRight = otherCard.x + otherCard.width;
             const targetWidthToRight = otherCardRight - currentCard.x;
@@ -218,7 +218,7 @@ const TableCardGrid: React.FC<TableCardGridProps> = ({ searchFilter }) => {
                 guideX = otherCardRight;
                 break;
             }
-            
+
             // Right edge to left edge (direct)
             const targetWidthDirect = otherCard.x - currentCard.x;
             if (targetWidthDirect > 0 && Math.abs(width - targetWidthDirect) < snapThreshold) {
@@ -226,7 +226,7 @@ const TableCardGrid: React.FC<TableCardGridProps> = ({ searchFilter }) => {
                 break;
             }
         }
-        
+
         // Check for height snap guides
         for (const otherCard of otherCards) {
             // Bottom edge to top edge (with gap)
@@ -235,7 +235,7 @@ const TableCardGrid: React.FC<TableCardGridProps> = ({ searchFilter }) => {
                 guideY = currentCard.y + targetHeightWithGap;
                 break;
             }
-            
+
             // Bottom edge to bottom edge
             const otherCardBottom = otherCard.y + otherCard.height;
             const targetHeightToBottom = otherCardBottom - currentCard.y;
@@ -243,7 +243,7 @@ const TableCardGrid: React.FC<TableCardGridProps> = ({ searchFilter }) => {
                 guideY = otherCardBottom;
                 break;
             }
-            
+
             // Bottom edge to top edge (direct)
             const targetHeightDirect = otherCard.y - currentCard.y;
             if (targetHeightDirect > 0 && Math.abs(height - targetHeightDirect) < snapThreshold) {
@@ -251,7 +251,7 @@ const TableCardGrid: React.FC<TableCardGridProps> = ({ searchFilter }) => {
                 break;
             }
         }
-        
+
         setSnapGuides({ x: guideX, y: guideY });
     }, [cards]);
 
@@ -266,18 +266,18 @@ const TableCardGrid: React.FC<TableCardGridProps> = ({ searchFilter }) => {
             if (delta) {
                 const x = Math.max(0, Math.round(item.left + delta.x));
                 const y = Math.max(0, Math.round(item.top + delta.y));
-                
+
                 // Get current card info for edge calculations
                 const currentCard = cards.find(card => card.id === item.id);
                 if (!currentCard) return;
-                
+
                 // Calculate snap guides during hover
                 const otherCards = cards.filter(card => card.id !== item.id);
                 const snapThreshold = 15;
                 const snapGap = 8; // Same gap as in moveCard
                 let guideX: number | undefined;
                 let guideY: number | undefined;
-                
+
                 // Check for horizontal snap guides
                 for (const otherCard of otherCards) {
                     // Top edge alignment - show where top edge will be
@@ -293,7 +293,7 @@ const TableCardGrid: React.FC<TableCardGridProps> = ({ searchFilter }) => {
                         break;
                     }
                 }
-                
+
                 // Check for vertical snap guides
                 for (const otherCard of otherCards) {
                     // Left edge to left edge - show where left edge will be
@@ -319,7 +319,7 @@ const TableCardGrid: React.FC<TableCardGridProps> = ({ searchFilter }) => {
                         break;
                     }
                 }
-                
+
                 setSnapGuides({ x: guideX, y: guideY });
             }
         },

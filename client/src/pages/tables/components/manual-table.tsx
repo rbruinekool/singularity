@@ -18,7 +18,7 @@ interface ManualTableProps {
     tableId: string;
 }
 
-const ManualTable: React.FC<ManualTableProps> = ({ tableId }) => {
+const ManualTable: React.FC<ManualTableProps> = React.memo(({ tableId }) => {
     const theme = useTheme();
     const store = useStore();
 
@@ -452,7 +452,7 @@ const ManualTable: React.FC<ManualTableProps> = ({ tableId }) => {
 
     return (
         <Box>
-            <Box sx={{ display: 'flex', flexDirection: 'row'}}>
+            <Box sx={{ display: 'flex', flexDirection: 'row' }}>
                 <Box sx={{ mb: 1, display: 'flex', gap: 1 }}>
                     <Button
                         size="small"
@@ -477,7 +477,7 @@ const ManualTable: React.FC<ManualTableProps> = ({ tableId }) => {
                     </Button>
                 </Box>
                 {/* Search filter */}
-                <Box sx={{ mb: 1, marginLeft:2 }}>
+                <Box sx={{ mb: 1, marginLeft: 2 }}>
                     <TextField
                         size="small"
                         placeholder="Search table..."
@@ -828,6 +828,6 @@ const ManualTable: React.FC<ManualTableProps> = ({ tableId }) => {
             </Menu>
         </Box>
     );
-};
+});
 
 export default ManualTable;

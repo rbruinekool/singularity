@@ -69,7 +69,7 @@ const RootRoute = createRootRoute({
     });
 
     //store.delTable('$Players$');
-    // store.delTable('DataTables');
+    //store.delTable('rundown');
     return (
       <Provider store={store}>
         <ThemeProvider theme={theme}>
