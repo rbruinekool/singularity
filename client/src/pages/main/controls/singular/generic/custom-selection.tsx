@@ -25,7 +25,7 @@ interface TableSelection {
 }
 
 // Define the possible input modes
-type InputMode = 'manual' | 'default' | 'table';
+type InputMode = 'manual' | 'default' | 'table' | 'follow';
 
 const CustomSelection: React.FC<CustomSelectionProps> = ({ model, rowId }) => {
     const store = useStore();
@@ -159,6 +159,9 @@ const CustomSelection: React.FC<CustomSelectionProps> = ({ model, rowId }) => {
         }
     };
 
+    // State for the Follow dialog
+    const [showFollowConfig, setShowFollowConfig] = useState(false);
+
     // Store the input mode when it changes
     const handleInputModeChange = (newMode: InputMode) => {
         setInputMode(newMode);
@@ -167,11 +170,17 @@ const CustomSelection: React.FC<CustomSelectionProps> = ({ model, rowId }) => {
         if (newMode === 'table') {
             // Set state for table configuration within the same dialog
             setShowTableConfig(true);
+            setShowFollowConfig(false);
+        } else if (newMode === 'follow') {
+            // Show follow configuration dialog
+            setShowFollowConfig(true);
+            setShowTableConfig(false);
         } else {
             // For other modes, just close the dialog
             store?.setCell(rundownId, rowId, `${model.id}_inputMode`, newMode);
             setInputMethodDialogOpen(false);
             setShowTableConfig(false);
+            setShowFollowConfig(false);
         }
     };
 
@@ -181,6 +190,14 @@ const CustomSelection: React.FC<CustomSelectionProps> = ({ model, rowId }) => {
         store?.setCell(rundownId, rowId, `${model.id}_inputMode`, 'table');
         setInputMethodDialogOpen(false);
         setShowTableConfig(false);
+    };
+
+    // Handle saving follow configuration and closing dialog
+    const handleSaveFollowConfig = () => {
+        // This will be implemented later with actual follow configuration
+        store?.setCell(rundownId, rowId, `${model.id}_inputMode`, 'follow');
+        setInputMethodDialogOpen(false);
+        setShowFollowConfig(false);
     };
 
     // Handle table configuration button click
@@ -260,6 +277,10 @@ const CustomSelection: React.FC<CustomSelectionProps> = ({ model, rowId }) => {
                 setTempTableColumns={setTempTableColumns}
                 availableTables={availableTables}
                 handleSaveTableConfig={handleSaveTableConfig}
+                // New props for Follow mode
+                showFollowConfig={showFollowConfig}
+                setShowFollowConfig={setShowFollowConfig}
+                handleSaveFollowConfig={handleSaveFollowConfig}
             />
         </Grid>
     );

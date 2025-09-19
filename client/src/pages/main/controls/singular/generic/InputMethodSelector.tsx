@@ -6,6 +6,8 @@ import {
 import TextFieldsIcon from '@mui/icons-material/TextFields';
 import ListAltIcon from '@mui/icons-material/ListAlt';
 import TableViewIcon from '@mui/icons-material/TableView';
+import SyncAltIcon from '@mui/icons-material/SyncAlt';
+import FollowConfigDialog from './FollowConfigDialog';
 
 interface TableSelection {
     tableId: string;
@@ -14,7 +16,7 @@ interface TableSelection {
 }
 
 // Define the possible input modes
-type InputMode = 'manual' | 'default' | 'table';
+type InputMode = 'manual' | 'default' | 'table' | 'follow';
 
 interface InputMethodSelectorProps {
     inputMethodDialogOpen: boolean;
@@ -32,6 +34,10 @@ interface InputMethodSelectorProps {
     setTempTableColumns: (columns: string[]) => void;
     availableTables: TableSelection[];
     handleSaveTableConfig: () => void;
+    // New props for Follow mode
+    showFollowConfig: boolean;
+    setShowFollowConfig: (show: boolean) => void;
+    handleSaveFollowConfig: () => void;
 }
 
 const InputMethodSelector: React.FC<InputMethodSelectorProps> = ({
@@ -49,7 +55,11 @@ const InputMethodSelector: React.FC<InputMethodSelectorProps> = ({
     tempTableColumns,
     setTempTableColumns,
     availableTables,
-    handleSaveTableConfig
+    handleSaveTableConfig,
+    // New props for Follow mode
+    showFollowConfig,
+    setShowFollowConfig,
+    handleSaveFollowConfig
 }) => {
     const getMethodBoxStyles = (mode: InputMode) => ({
         display: 'flex',
@@ -76,6 +86,7 @@ const InputMethodSelector: React.FC<InputMethodSelectorProps> = ({
     // Reset to method selection
     const handleBackToMethodSelection = () => {
         setShowTableConfig(false);
+        setShowFollowConfig(false);
     };
 
     // Update temp columns when table changes
@@ -97,12 +108,12 @@ const InputMethodSelector: React.FC<InputMethodSelectorProps> = ({
             maxWidth="xs"
             fullWidth
         >
-            {!showTableConfig ? (
+            {!showTableConfig && !showFollowConfig ? (
                 // Show method selection options
                 <>
                     <DialogTitle>Select Input Method</DialogTitle>
                     <DialogContent>
-                        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, p: 1 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, p: 1, flexWrap: 'wrap' }}>
                             <Box
                                 sx={getMethodBoxStyles('manual')}
                                 onClick={() => handleInputModeChange('manual')}
@@ -137,13 +148,24 @@ const InputMethodSelector: React.FC<InputMethodSelectorProps> = ({
                                     <span style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}></span>
                                 </Tooltip>
                             </Box>
+                            
+                            <Box
+                                sx={getMethodBoxStyles('follow')}
+                                onClick={() => handleInputModeChange('follow')}
+                            >
+                                <SyncAltIcon sx={{ fontSize: '24px' }} />
+                                <Typography variant="caption" sx={{ mt: 0.5 }}>Follow</Typography>
+                                <Tooltip title="Follow values from another field">
+                                    <span style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}></span>
+                                </Tooltip>
+                            </Box>
                         </Box>
                     </DialogContent>
                     <DialogActions>
                         <Button onClick={() => setInputMethodDialogOpen(false)}>Cancel</Button>
                     </DialogActions>
                 </>
-            ) : (
+            ) : showTableConfig ? (
                 // Show table configuration
                 <>
                     <DialogTitle>Configure Table Selection</DialogTitle>
@@ -196,6 +218,12 @@ const InputMethodSelector: React.FC<InputMethodSelectorProps> = ({
                         </Button>
                     </DialogActions>
                 </>
+            ) : (
+                // Show follow configuration
+                <FollowConfigDialog 
+                    onBack={handleBackToMethodSelection}
+                    onSave={handleSaveFollowConfig}
+                />
             )}
         </Dialog>
     );
